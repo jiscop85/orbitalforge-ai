@@ -34,7 +34,7 @@ All operations are prevalidated before the first generated write, then backed up
 ## Test isolation
 
 Quality execution uses a disposable copy of the active project. Credential-like environment variables
-(including the OpenAI key and GitHub tokens) are removed, a private temporary HOME/cache is used, and
+(including the Groq key and GitHub tokens) are removed, a private temporary HOME/cache is used, and
 Pytest sockets are disabled. Push credentials are not introduced into the workflow until all generated
 code execution is finished.
 
@@ -53,6 +53,6 @@ safety-critical decisions without independent expert validation.
 
 ## Secret handling
 
-`OPENAI_API_KEY` must exist only as a GitHub Actions repository/environment secret. Never commit API
+`GROQ_API_KEY` must exist only as a GitHub Actions repository/environment secret. Never commit API
 keys, PATs, private keys, `.env` files or exported credentials. Secret-like generated content is
 rejected by static scans and the commit step also blocks suspicious credential filenames.

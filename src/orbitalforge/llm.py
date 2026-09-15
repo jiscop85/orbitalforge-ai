@@ -130,9 +130,14 @@ and decomposable into bounded engineering tasks with objective acceptance criter
 
 @lru_cache(maxsize=1)
 def _client() -> OpenAI:
-    if not os.getenv("OPENAI_API_KEY"):
-        raise LLMError("OPENAI_API_KEY is not configured")
-    return OpenAI(timeout=120.0, max_retries=1)
+    if not os.getenv("GROQ_API_KEY"):
+        raise LLMError("GROQ_API_KEY is not configured")
+    return OpenAI(
+        api_key=os.environ["GROQ_API_KEY"],
+        base_url="https://api.groq.com/openai/v1",
+        timeout=120.0,
+        max_retries=0,
+    )
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -184,10 +189,6 @@ def _call_json(
                     "instructions": instructions,
                     "input": input_text,
                     "max_output_tokens": max_output_tokens,
-                    "store": False,
-                    "prompt_cache_key": f"orbitalforge:v3:{schema_name}:{model_name}",
-                    "prompt_cache_options": {"ttl": "30m"},
-                    "safety_identifier": "orbitalforge-autonomous-research",
                     "text": {
                         "format": {
                             "type": "json_schema",

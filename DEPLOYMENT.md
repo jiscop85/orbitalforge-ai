@@ -8,7 +8,7 @@
 3. Confirm **Settings → Actions → General** permits Actions for the repository and that workflow
    permissions allow `GITHUB_TOKEN` to write repository contents. The workflow requests only
    `contents: write` and `issues: write`.
-4. Add repository secret `OPENAI_API_KEY` under
+4. Add repository secret `GROQ_API_KEY` under
    **Settings → Secrets and variables → Actions → New repository secret**.
 
 The initial upload changes core OrbitalForge paths and therefore triggers the workflow immediately.
@@ -21,7 +21,7 @@ The requested UTC slots are:
 
 `07, 17, 27, 37, 47, 57` minutes past each hour.
 
-This is a nominal ten-minute cadence. GitHub Actions scheduling is best-effort and may delay or queue
+This is a nominal 30-minute cadence. GitHub Actions scheduling is best-effort and may delay or queue
 runs. `concurrency` serializes OrbitalForge runs so two workers never update persistent state at the
 same time. A run has an 18-minute hard ceiling; if a run overlaps a later schedule, the later run waits
 rather than racing it.
@@ -54,10 +54,12 @@ to PR-based governance. Do not weaken unrelated production protections simply to
 
 ## Billing and quotas
 
-The ten-minute cadence can make many model calls. OpenAI API billing, project limits, rate limits, and
-model access belong to the API account associated with `OPENAI_API_KEY`. Monitor API usage and set
-account-level limits appropriate to your budget. OrbitalForge records observed model token usage in
-its persistent state and `PROJECTS.md`, but that telemetry is not a billing authority.
+The 30-minute cadence is deliberately conservative for the Groq Free Plan. Model access and exact
+rate/token limits belong to the Groq account associated with `GROQ_API_KEY` and can change. Check
+Groq Console → Limits for current account-specific quotas. No paid fallback is configured: if a free
+quota is exhausted, the workflow fails safely and a later scheduled run retries after the quota resets.
+OrbitalForge records observed model token usage in its persistent state and `PROJECTS.md`, but that
+telemetry is not a provider quota authority.
 
 ## Platform limits to monitor
 

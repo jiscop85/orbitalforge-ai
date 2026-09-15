@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orbitalforge"
-version = "3.0.0"
-description = "Autonomous, self-reviewing AI/robotics/data/satellite research software factory for GitHub Actions."
+version = "4.0.0"
+description = "Free-tier autonomous, self-reviewing AI/robotics/data/satellite research software factory for GitHub Actions and Groq."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

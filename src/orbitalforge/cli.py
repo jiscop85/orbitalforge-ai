@@ -27,8 +27,8 @@ def main() -> None:
         elif args.command == "validate":
             print("\n".join(validate_repository(root, args.all_projects)))
         elif args.command == "preflight":
-            if not os.getenv("OPENAI_API_KEY"):
-                raise RuntimeError("OPENAI_API_KEY is not configured")
+            if not os.getenv("GROQ_API_KEY"):
+                raise RuntimeError("GROQ_API_KEY is not configured")
             validate_repository(root, False)
             print("preflight ok")
     except Exception as exc:

@@ -1,35 +1,35 @@
-version: 3
-schedule_minutes: 10
+version: 4
+schedule_minutes: 30
 
 # Quality-first defaults. Repository variables can override the model/reasoning fields.
-worker_model: gpt-5.6-sol
-reviewer_model: gpt-5.6-sol
-planner_model: gpt-5.6-sol
-fallback_model: gpt-5.6-terra
+worker_model: openai/gpt-oss-120b
+reviewer_model: qwen/qwen3.8-27b
+planner_model: qwen/qwen3.8-27b
+fallback_model: ""
 worker_reasoning_effort: high
-recovery_reasoning_effort: xhigh
-reviewer_reasoning_effort: xhigh
-planner_reasoning_effort: xhigh
+recovery_reasoning_effort: high
+reviewer_reasoning_effort: high
+planner_reasoning_effort: high
 
 # Bounded generation/context budgets. The worker emits complete replacement files, so output needs
 # enough room for real code while still preventing runaway generations.
-max_output_tokens: 14000
-reviewer_max_output_tokens: 3600
-planner_max_output_tokens: 6000
-max_context_chars: 64000
-max_context_files: 14
-max_context_file_chars: 16000
-max_audit_context_chars: 140000
-max_audit_context_files: 36
-max_diff_chars_for_review: 50000
-max_operations_per_tick: 8
-max_file_bytes: 160000
-max_total_write_bytes: 480000
+max_output_tokens: 1800
+reviewer_max_output_tokens: 900
+planner_max_output_tokens: 1400
+max_context_chars: 6500
+max_context_files: 6
+max_context_file_chars: 2500
+max_audit_context_chars: 9000
+max_audit_context_files: 8
+max_diff_chars_for_review: 4500
+max_operations_per_tick: 4
+max_file_bytes: 60000
+max_total_write_bytes: 120000
 quality_timeout_seconds: 240
 coverage_min_percent: 80
 min_final_tests: 4
 min_final_readme_chars: 1200
-max_api_attempts: 2
+max_api_attempts: 1
 max_task_attempts_before_recovery: 5
 
 allowed_extensions:

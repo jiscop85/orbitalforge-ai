@@ -1,8 +1,13 @@
-# OrbitalForge Ultimate v3.0.0
+# OrbitalForge Free v4.0.0
+
+> **Free Edition v4:** This build uses the Groq Free Plan instead of paid OpenAI API credits.
+> Default worker: `openai/gpt-oss-120b`; reviewer/planner: `qwen/qwen3.8-27b`.
+> The workflow runs twice per hour (`:07` and `:37`) to preserve free-tier token headroom.
+> Free tiers are rate-limited and provider availability/limits can change; no paid fallback is configured.
 
 OrbitalForge is an autonomous, quality-gated research-software factory for **AI/ML, robotics,
 scientific data processing, remote sensing, and satellite systems**. Once this repository is on the
-GitHub default branch and the `OPENAI_API_KEY` repository secret exists, GitHub Actions schedules one
+GitHub default branch and the `GROQ_API_KEY` repository secret exists, GitHub Actions schedules one
 bounded research cycle every ten minutes. The system resumes persistent state, advances the active
 project, validates the candidate in an isolated temporary copy, independently reviews milestones, and
 archives a project only after deterministic gates and a final scientific/software audit pass. It then
@@ -21,7 +26,7 @@ There is only one credential step that cannot safely be embedded in a ZIP:
    repository's **default branch**.
 2. Ensure GitHub Actions is enabled and the repository allows `GITHUB_TOKEN` to write repository
    contents.
-3. Add repository secret `OPENAI_API_KEY` at
+3. Add repository secret `GROQ_API_KEY` at
    **Settings → Secrets and variables → Actions → New repository secret**.
 
 That is all. The initial upload itself triggers a setup/run attempt because the workflow watches its
@@ -29,7 +34,7 @@ core files. If the key is missing, it creates one setup issue (when Issues are e
 safely. After the key exists, the next scheduled slot runs automatically; no manual dispatch is
 required.
 
-> ChatGPT subscriptions and OpenAI API billing are separate. Never place the key in a file or commit.
+> Groq Free Plan usage is separate from ChatGPT/OpenAI billing. Never place the Groq key in a file or commit.
 
 ## Autonomous lifecycle
 
@@ -89,12 +94,12 @@ independent GPT-5.6 Sol task review
 
 ## Quality-first defaults
 
-- implementation worker: `gpt-5.6-sol`, reasoning `high`
-- recovery worker after repeated difficulty: `gpt-5.6-sol`, reasoning `xhigh`
-- independent task reviewer: `gpt-5.6-sol`, reasoning `xhigh`
-- final scientific/software auditor: `gpt-5.6-sol`, reasoning `xhigh`
-- novel-project planner: `gpt-5.6-sol`, reasoning `xhigh`
-- bounded fallback: `gpt-5.6-terra`
+- implementation worker: `openai/gpt-oss-120b`, reasoning `high`
+- recovery worker after repeated difficulty: `openai/gpt-oss-120b`, reasoning `high`
+- independent task reviewer: `openai/gpt-oss-120b`, reasoning `high`
+- final scientific/software auditor: `openai/gpt-oss-120b`, reasoning `high`
+- novel-project planner: `openai/gpt-oss-120b`, reasoning `high`
+- bounded fallback: `qwen/qwen3.8-27b`
 - generated project coverage floor: **80%**
 - final project requires executable source, at least **4 explicit tests**, substantial documentation,
   reproducibility/usage/limitations sections, and no unfinished implementation markers
@@ -177,17 +182,17 @@ python -m orbitalforge.cli validate --root . --all-projects
 One manual local tick:
 
 ```bash
-export OPENAI_API_KEY="..."
+export GROQ_API_KEY="..."
 python -m orbitalforge.cli tick --root .
 ```
 
 ## Operational reality
 
-The workflow requests a ten-minute cadence at `:07, :17, :27, :37, :47, :57` UTC. GitHub scheduled
+The workflow requests a 30-minute cadence at `:07` and `:37` UTC each hour. GitHub scheduled
 workflows are **best-effort**, not a hard real-time scheduler: a run can start late, be queued behind a
 previous run, or be affected by GitHub availability. OrbitalForge serializes runs deliberately to
 prevent concurrent state corruption. Likewise, no software can guarantee availability of GitHub,
-OpenAI, package indexes, network paths, billing, or repository permissions. The design therefore
+Groq, package indexes, network paths, free-tier quotas, or repository permissions. The design therefore
 focuses on rollback, persisted state, bounded retries, failure reporting, and safe automatic recovery.
 
 See `DEPLOYMENT.md` before changing branch protection or Actions permissions.

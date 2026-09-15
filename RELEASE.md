@@ -1,15 +1,15 @@
-# OrbitalForge Ultimate v3.0.0 — release verification
+# OrbitalForge Free v4.0.0 — release verification
 
 Release target: GitHub-hosted autonomous research factory for AI/ML, robotics, data processing and
 satellite systems.
 
 Verified design properties:
 
-- nominal ten-minute GitHub Actions schedule, offset from minute zero;
+- nominal 30-minute GitHub Actions schedule at :07 and :37, offset from minute zero;
 - default-branch-only autonomous operation with serialized concurrency;
-- current GPT-5.6 Sol worker/reviewer/planner model IDs, Terra fallback;
+- Groq Free Plan models: GPT-OSS 120B worker and Qwen 3.8 27B reviewer/planner; no paid fallback;
 - strict structured model outputs and bounded model/file/context budgets;
-- persistent v3 state with legacy v2 migration;
+- persistent v3 state with legacy v2 migration (application release v4);
 - project-local prevalidated writes with rollback;
 - generated-code secret/path/import/dependency controls;
 - generated tests execute in a disposable project copy with secret-like environment variables removed
@@ -25,7 +25,7 @@ Verified design properties:
 - operational GitHub Issue on external/infrastructure failure;
 - GitHub Actions dependencies pinned to immutable release commit SHAs and maintained by Dependabot.
 
-Required external condition: the repository owner must add `OPENAI_API_KEY` as a GitHub Actions secret
-and the repository/account must have sufficient GitHub Actions and OpenAI API permissions, quota and
+Required external condition: the repository owner must add `GROQ_API_KEY` as a GitHub Actions secret
+and the repository/account must have sufficient GitHub Actions and Groq Free Plan permissions, quota and
 billing. GitHub scheduling and external APIs are not hard-real-time or 100%-available services; see
 `DEPLOYMENT.md` and `README.md` for the exact operational guarantees and limitations.

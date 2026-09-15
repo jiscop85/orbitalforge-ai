@@ -1,3 +1,11 @@
+
+## 4.0.0 - Free Groq Edition
+
+- Replaced paid OpenAI API dependency with Groq's OpenAI-compatible Free Plan endpoint.
+- Worker defaults to GPT-OSS 120B; reviewer/planner default to Qwen 3.8 27B.
+- Reduced context/output budgets and disabled same-run API retries/fallbacks to stay within free-tier limits.
+- Changed schedule to twice per hour (:07 and :37).
+
 # Changelog
 
 ## 3.0.0 — Final hardened release
