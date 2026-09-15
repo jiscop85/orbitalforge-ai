@@ -161,9 +161,57 @@ def _extract_json(text: str) -> dict[str, Any]:
 
 def _usage(response: Any) -> tuple[int, int]:
     usage = getattr(response, "usage", None)
-    return int(getattr(usage, "input_tokens", 0) or 0), int(
-        getattr(usage, "output_tokens", 0) or 0
+    input_tokens = getattr(usage, "input_tokens", None)
+    output_tokens = getattr(usage, "output_tokens", None)
+    if input_tokens is None:
+        input_tokens = getattr(usage, "prompt_tokens", 0)
+    if output_tokens is None:
+        output_tokens = getattr(usage, "completion_tokens", 0)
+    return int(input_tokens or 0), int(output_tokens or 0)
+
+
+def _chat_json_request(
+    *,
+    model: str,
+    reasoning_effort: str,
+    max_output_tokens: int,
+    instructions: str,
+    input_text: str,
+    schema_name: str,
+    schema: dict[str, Any],
+    strict_schema: bool,
+) -> Any:
+    # Groq's Chat Completions endpoint is the more mature path for Structured Outputs.
+    # We keep reasoning hidden so JSON mode is not polluted by reasoning traces.
+    content = (
+        f"{instructions}\n\n{input_text}\n\n"
+        "Return ONLY one JSON object. No markdown, no commentary. "
+        f"The object must match this JSON Schema exactly:\n{json.dumps(schema, separators=(',', ':'))}"
     )
+    response_format: dict[str, Any]
+    if strict_schema:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": schema,
+            },
+        }
+    else:
+        response_format = {"type": "json_object"}
+
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [{"role": "user", "content": content}],
+        "response_format": response_format,
+        "max_completion_tokens": max_output_tokens,
+        "temperature": 0.2,
+        "extra_body": {"reasoning_format": "hidden"},
+    }
+    if reasoning_effort:
+        kwargs["reasoning_effort"] = reasoning_effort
+    return _client().chat.completions.create(**kwargs)
 
 
 def _call_json(
@@ -183,37 +231,42 @@ def _call_json(
     models = [model] + ([fallback_model] if fallback_model and fallback_model != model else [])
     for model_name in models:
         for attempt in range(config.max_api_attempts):
-            try:
-                kwargs: dict[str, Any] = {
-                    "model": model_name,
-                    "instructions": instructions,
-                    "input": input_text,
-                    "max_output_tokens": max_output_tokens,
-                    "text": {
-                        "format": {
-                            "type": "json_schema",
-                            "name": schema_name,
-                            "schema": schema,
-                            "strict": True,
-                        }
-                    },
-                }
-                if reasoning_effort:
-                    kwargs["reasoning"] = {"effort": reasoning_effort}
-                response = _client().responses.create(**kwargs)
-                output_text = getattr(response, "output_text", "") or ""
-                if not output_text.strip():
-                    status = getattr(response, "status", "unknown")
-                    incomplete = getattr(response, "incomplete_details", None)
-                    raise LLMError(f"Empty model output; status={status}; incomplete={incomplete}")
-                raw = _extract_json(output_text)
-                parsed = validate(raw)
-                input_tokens, output_tokens = _usage(response)
-                return parsed, input_tokens, output_tokens
-            except Exception as exc:  # bounded retry, then bounded model fallback
-                errors.append(f"{model_name}/attempt-{attempt + 1}: {exc}")
-                if attempt + 1 < config.max_api_attempts:
-                    time.sleep(2.0 * (attempt + 1))
+            # Attempt 1 uses strict Structured Outputs. If Groq rejects a generated schema instance
+            # (a provider-side json_validate_failed), immediately fall back to JSON Object Mode and
+            # perform our existing local schema/domain validation. This makes free-tier runs much
+            # more resilient without weakening repository safety gates.
+            for strict_schema in (True, False):
+                mode = "strict" if strict_schema else "json-object"
+                try:
+                    response = _chat_json_request(
+                        model=model_name,
+                        reasoning_effort=reasoning_effort,
+                        max_output_tokens=max_output_tokens,
+                        instructions=instructions,
+                        input_text=input_text,
+                        schema_name=schema_name,
+                        schema=schema,
+                        strict_schema=strict_schema,
+                    )
+                    choices = getattr(response, "choices", None) or []
+                    if not choices:
+                        raise LLMError("Model returned no choices")
+                    message = getattr(choices[0], "message", None)
+                    output_text = getattr(message, "content", "") if message is not None else ""
+                    output_text = output_text or ""
+                    if not output_text.strip():
+                        raise LLMError("Model returned empty content")
+                    raw = _extract_json(output_text)
+                    parsed = validate(raw)
+                    input_tokens, output_tokens = _usage(response)
+                    return parsed, input_tokens, output_tokens
+                except Exception as exc:
+                    errors.append(f"{model_name}/attempt-{attempt + 1}/{mode}: {exc}")
+                    # JSON Object Mode is our compatibility fallback, so if it fails too we move on.
+                    if not strict_schema:
+                        break
+            if attempt + 1 < config.max_api_attempts:
+                time.sleep(2.0 * (attempt + 1))
     raise LLMError("; ".join(errors)[-5000:])
 
 

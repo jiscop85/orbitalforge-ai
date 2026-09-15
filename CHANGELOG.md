@@ -1,3 +1,12 @@
+# Changelog
+
+## 4.0.1 - Groq structured-output reliability fix
+
+- Switched model calls from the beta Groq Responses path to Chat Completions for structured JSON.
+- Added automatic fallback from strict JSON Schema mode to JSON Object mode with local validation.
+- Kept reasoning hidden so reasoning traces cannot corrupt machine-readable output.
+- Preserved all repository security, quality, rollback, and validation gates.
+
 
 ## 4.0.0 - Free Groq Edition
 
@@ -5,8 +14,6 @@
 - Worker defaults to GPT-OSS 120B; reviewer/planner default to Qwen 3.8 27B.
 - Reduced context/output budgets and disabled same-run API retries/fallbacks to stay within free-tier limits.
 - Changed schedule to twice per hour (:07 and :37).
-
-# Changelog
 
 ## 3.0.0 — Final hardened release
 

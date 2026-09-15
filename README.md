@@ -1,4 +1,4 @@
-# OrbitalForge Free v4.0.0
+# OrbitalForge Free v4.0.1
 
 > **Free Edition v4:** This build uses the Groq Free Plan instead of paid OpenAI API credits.
 > Default worker: `openai/gpt-oss-120b`; reviewer/planner: `qwen/qwen3.8-27b`.

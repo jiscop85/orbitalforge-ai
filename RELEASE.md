@@ -1,4 +1,4 @@
-# OrbitalForge Free v4.0.0 — release verification
+# OrbitalForge Free v4.0.1 — release verification
 
 Release target: GitHub-hosted autonomous research factory for AI/ML, robotics, data processing and
 satellite systems.
@@ -29,3 +29,8 @@ Required external condition: the repository owner must add `GROQ_API_KEY` as a G
 and the repository/account must have sufficient GitHub Actions and Groq Free Plan permissions, quota and
 billing. GitHub scheduling and external APIs are not hard-real-time or 100%-available services; see
 `DEPLOYMENT.md` and `README.md` for the exact operational guarantees and limitations.
+
+
+## 4.0.1 runtime compatibility
+
+Groq structured-output calls use Chat Completions first and automatically fall back to JSON Object mode when provider-side schema generation fails. Local validation remains mandatory before any generated change can be committed.
