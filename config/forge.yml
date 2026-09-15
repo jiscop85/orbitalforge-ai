@@ -1,0 +1,102 @@
+version: 3
+schedule_minutes: 10
+
+# Quality-first defaults. Repository variables can override the model/reasoning fields.
+worker_model: gpt-5.6-sol
+reviewer_model: gpt-5.6-sol
+planner_model: gpt-5.6-sol
+fallback_model: gpt-5.6-terra
+worker_reasoning_effort: high
+recovery_reasoning_effort: xhigh
+reviewer_reasoning_effort: xhigh
+planner_reasoning_effort: xhigh
+
+# Bounded generation/context budgets. The worker emits complete replacement files, so output needs
+# enough room for real code while still preventing runaway generations.
+max_output_tokens: 14000
+reviewer_max_output_tokens: 3600
+planner_max_output_tokens: 6000
+max_context_chars: 64000
+max_context_files: 14
+max_context_file_chars: 16000
+max_audit_context_chars: 140000
+max_audit_context_files: 36
+max_diff_chars_for_review: 50000
+max_operations_per_tick: 8
+max_file_bytes: 160000
+max_total_write_bytes: 480000
+quality_timeout_seconds: 240
+coverage_min_percent: 80
+min_final_tests: 4
+min_final_readme_chars: 1200
+max_api_attempts: 2
+max_task_attempts_before_recovery: 5
+
+allowed_extensions:
+  - .py
+  - .md
+  - .json
+  - .yaml
+  - .yml
+  - .toml
+  - .txt
+  - .csv
+  - .gitignore
+
+forbidden_names:
+  - .env
+  - secrets
+  - credentials
+  - id_rsa
+  - id_ed25519
+  - private_key
+  - token
+
+allowed_python_packages:
+  - numpy
+  - scipy
+  - sklearn
+  - pandas
+  - matplotlib
+  - networkx
+  - astropy
+  - pytest
+  - pytest-cov
+  - pytest-socket
+  - ruff
+
+denied_python_imports:
+  - socket
+  - os
+  - requests
+  - httpx
+  - aiohttp
+  - paramiko
+  - ftplib
+  - telnetlib
+  - webbrowser
+  - subprocess
+  - urllib
+  - http
+  - smtplib
+  - imaplib
+  - poplib
+  - xmlrpc
+  - pty
+  - ctypes
+  - importlib
+
+project_policy:
+  required_domains:
+    - AI/ML
+    - robotics
+    - data processing
+    - satellite systems
+  simulation_only: true
+  no_physical_actuation: true
+  no_weaponization: true
+  no_credentials: true
+  no_external_network_required_for_tests: true
+  deterministic_tests: true
+  synthetic_data_by_default: true
+  no_fabricated_results: true

@@ -1,0 +1,659 @@
+projects:
+- id: satellite-rover-intelligence
+  title: Satellite-to-Rover Terrain Intelligence
+  summary: Build a reproducible pipeline that turns synthetic multispectral satellite terrain observations
+    into uncertainty-aware traversability maps and uses them for simulated rover planning, state estimation,
+    and mission evaluation.
+  domains:
+  - AI/ML
+  - robotics
+  - data processing
+  - satellite systems
+  - remote sensing
+  tasks:
+  - id: T01
+    title: Scientific data model and terrain simulator
+    instruction: Create typed terrain-cube structures and a deterministic multispectral/elevation simulator
+      with obstacles and ground-truth traversability.
+    acceptance_criteria:
+    - Same seed produces identical scenes and different seeds can produce different scenes.
+    - Band shapes, masks, elevation and traversability are validated with explicit invariants.
+    - Tests cover invalid dimensions/ranges and reproducibility.
+  - id: T02
+    title: Remote-sensing preprocessing and features
+    instruction: Implement missing-data handling, normalization, spectral indices, slope and roughness
+      features for the synthetic cube.
+    acceptance_criteria:
+    - Invalid/cloud-like pixels are represented explicitly rather than silently imputed.
+    - Feature names/shapes are deterministic and documented.
+    - Tests include constant bands, missing values and boundary terrain.
+  - id: T03
+    title: Baseline traversability model
+    instruction: Implement a reproducible classical ML baseline for traversability/risk prediction with
+      train/evaluation separation.
+    acceptance_criteria:
+    - Training and evaluation use deterministic splits without leakage.
+    - Metrics are computed from actual predictions and never hard-coded.
+    - Tests validate probability/risk bounds and degenerate inputs.
+  - id: T04
+    title: Uncertainty-aware spatial risk map
+    instruction: Add spatial post-processing and uncertainty estimation without smoothing across hard
+      obstacle boundaries.
+    acceptance_criteria:
+    - Risk and uncertainty outputs are bounded and shape-preserving.
+    - Obstacles remain impassable after post-processing.
+    - Tests cover small maps, edges and high-uncertainty regions.
+  - id: T05
+    title: Rover cost-grid model
+    instruction: Convert risk, elevation and uncertainty into an explicit navigation cost grid.
+    acceptance_criteria:
+    - Impassable cells use a documented representation.
+    - Cost components and weights are validated and non-negative.
+    - 'Tests verify monotonicity: increased risk/uncertainty cannot lower cost.'
+  - id: T06
+    title: Risk-aware A-star planner
+    instruction: Implement deterministic 8-connected A-star route planning over the cost grid.
+    acceptance_criteria:
+    - Planner returns valid adjacent paths or a clear unreachable result.
+    - Path cost matches the documented movement/cell-cost model.
+    - Tests cover start=goal, blocked goals and competing safe/risky routes.
+  - id: T07
+    title: Dynamic hazard replanning
+    instruction: Simulate newly discovered local hazards and route replanning during execution.
+    acceptance_criteria:
+    - Simulation never traverses a newly marked impassable cell.
+    - Metrics include route length, accumulated risk and replanning count from actual execution.
+    - Tests are deterministic under a fixed seed.
+  - id: T08
+    title: Rover state estimation
+    instruction: Implement a lightweight 2D Kalman-style estimator for simulated odometry and GNSS-like
+      observations.
+    acceptance_criteria:
+    - Prediction/update dimensions and covariance properties are checked.
+    - Estimator handles missing observations explicitly.
+    - Tests verify covariance symmetry/non-negative diagonals and deterministic replay.
+  - id: T09
+    title: Integrated mission simulator
+    instruction: Connect terrain generation, risk modeling, planning, state estimation and execution into
+      one offline mission demo.
+    acceptance_criteria:
+    - A single seeded entry point runs end-to-end without network access.
+    - Machine-readable mission metrics are emitted from the actual run.
+    - Integration tests cover both reachable and unreachable missions.
+  - id: T10
+    title: Experiment harness and documentation
+    instruction: Add multi-seed experiments, CSV/JSON results and complete architecture/assumptions/limitations
+      documentation.
+    acceptance_criteria:
+    - Repeated experiment batches are reproducible.
+    - Documentation explains synthetic-data limitations and does not claim real-world performance.
+    - README contains a concrete offline usage example and interprets metrics correctly.
+- id: orbital-telemetry-anomaly-lab
+  title: Orbital Telemetry Anomaly Lab
+  summary: Create an offline satellite telemetry analytics stack for synthetic multivariate sensor streams,
+    combining signal processing, anomaly detection, explainability, health scoring, and deterministic
+    streaming replay.
+  domains:
+  - AI/ML
+  - data processing
+  - satellite systems
+  - robotics
+  tasks:
+  - id: T01
+    title: Telemetry schema and simulator
+    instruction: Create typed telemetry packets and a seeded multichannel spacecraft simulator with modes,
+      drift, noise, dropouts and labeled fault injections.
+    acceptance_criteria:
+    - Timestamps are monotonic and channel units/ranges are documented.
+    - Fault windows and labels are reproducible under a fixed seed.
+    - Tests cover nominal, dropout and injected-fault cases.
+  - id: T02
+    title: Cleaning and resampling
+    instruction: Implement validation, resampling, missing-value policy and robust scaling.
+    acceptance_criteria:
+    - Duplicate/out-of-order timestamps are handled deterministically.
+    - Missing-data indicators are preserved for downstream logic.
+    - Tests cover gaps, irregular cadence and all-missing windows.
+  - id: T03
+    title: Window feature extraction
+    instruction: Implement time- and frequency-domain features for telemetry windows.
+    acceptance_criteria:
+    - Feature ordering/names are stable.
+    - Constant and short windows do not create uncontrolled NaN/inf values.
+    - Tests validate simple signals with analytically expected features.
+  - id: T04
+    title: Unsupervised anomaly baseline
+    instruction: Add a reproducible unsupervised anomaly detector and normalized score interface.
+    acceptance_criteria:
+    - Model fitting excludes labeled fault windows in the evaluation fixture.
+    - Scores have documented direction/range.
+    - Tests validate separation on a seeded synthetic fault scenario without hard-coded benchmark claims.
+  - id: T05
+    title: Change-point evidence
+    instruction: Add a lightweight statistical change-point detector and evidence fusion rule.
+    acceptance_criteria:
+    - Detector parameters are validated.
+    - Fusion combines evidence transparently rather than hiding heuristics.
+    - Tests cover abrupt shift, gradual drift and no-change streams.
+  - id: T06
+    title: Fault attribution
+    instruction: Provide channel/feature contribution summaries for detected anomalies.
+    acceptance_criteria:
+    - Attribution is described as evidence, not causal proof.
+    - Contributions map back to stable feature/channel names.
+    - Tests verify dominant injected channel appears in attribution for a controlled case.
+  - id: T07
+    title: Mission health index
+    instruction: Create a bounded health score with confidence and degraded-data handling.
+    acceptance_criteria:
+    - Health and confidence stay within documented bounds.
+    - Missing telemetry lowers confidence rather than fabricating normality.
+    - Tests cover nominal, faulted and sparse data.
+  - id: T08
+    title: Online replay engine
+    instruction: Implement deterministic packet replay and incremental scoring/event logging.
+    acceptance_criteria:
+    - Replay preserves event order and does not require network access.
+    - Backpressure is represented by bounded iteration/queues rather than unbounded accumulation.
+    - Tests compare batch and replay outputs on the same seeded data.
+  - id: T09
+    title: Evaluation suite
+    instruction: Measure precision/recall, false alarms, detection delay and missing-data resilience on
+      synthetic scenarios.
+    acceptance_criteria:
+    - Metrics are calculated from labels/predictions with zero-division handling.
+    - Scenario seeds/configuration are stored alongside results.
+    - Tests validate metric calculations independently.
+  - title: Autonomous inspection-robot decision layer
+    instruction: Convert validated telemetry anomaly, attribution, and mission-health outputs into a simulation-only
+      inspection policy for an autonomous service robot. Rank inspection targets, generate deterministic
+      inspection actions/waypoints in an abstract spacecraft layout, and expose uncertainty-aware reasons
+      for each recommendation. No physical-actuation interface is permitted.
+    acceptance_criteria:
+    - A deterministic simulation-only inspection policy ranks at least three candidate subsystem targets
+      from health/anomaly evidence.
+    - The policy emits bounded abstract robot actions or waypoints with uncertainty/reason fields and
+      no hardware-control API.
+    - Tests verify stable prioritization, safe empty-anomaly behavior, and sensitivity to a changed high-risk
+      subsystem.
+    id: T10
+  - id: T11
+    title: Reports and documentation
+    instruction: Add JSON/CSV reporting plus architecture, assumptions, extension points and limitations.
+    acceptance_criteria:
+    - Reports are machine-readable and derived from actual evaluations.
+    - Documentation clearly distinguishes synthetic faults from real spacecraft behavior.
+    - README provides an offline reproduction command.
+- id: multispectral-change-detection
+  title: Multispectral Earth-Observation Change Detection
+  summary: Develop a reproducible offline before/after Earth-observation pipeline with synthetic multispectral
+    scenes, masking, alignment stress tests, change features, segmentation and spatial evaluation.
+  domains:
+  - AI/ML
+  - data processing
+  - satellite systems
+  - remote sensing
+  - robotics
+  tasks:
+  - id: T01
+    title: Synthetic EO scene generator
+    instruction: Generate seeded before/after multispectral scenes with land-cover classes, illumination
+      variation, clouds and ground-truth change masks.
+    acceptance_criteria:
+    - Band semantics and value ranges are documented.
+    - Change masks correspond to actual simulated land-cover transitions.
+    - Tests prove deterministic generation and mask consistency.
+  - id: T02
+    title: Radiometric preprocessing
+    instruction: Implement invalid-pixel/cloud masking and robust per-band normalization.
+    acceptance_criteria:
+    - Masked pixels cannot influence normalization statistics.
+    - Constant/near-constant bands are handled safely.
+    - Tests cover cloud-only regions and missing pixels.
+  - id: T03
+    title: Spectral indices
+    instruction: Implement documented vegetation/water/built-up proxy indices for the synthetic band convention.
+    acceptance_criteria:
+    - Division-by-zero is numerically safe.
+    - Index output validity masks propagate input masks.
+    - Tests use simple reflectance values with analytically expected results.
+  - id: T04
+    title: Registration stress and correction
+    instruction: Simulate integer/subpixel-style misregistration at a tractable level and implement alignment
+      estimation/correction.
+    acceptance_criteria:
+    - Residual alignment error is measured from known synthetic shift.
+    - Alignment never uses the ground-truth change mask as an input.
+    - Tests cover zero shift and known shifts.
+  - id: T05
+    title: Change feature stack
+    instruction: Build spectral differences, ratios, index deltas and local texture summaries.
+    acceptance_criteria:
+    - Features preserve spatial shape and masks.
+    - Feature names/order are deterministic.
+    - Tests cover unchanged pixels and controlled changed pixels.
+  - id: T06
+    title: Baseline change classifier
+    instruction: Implement a reproducible pixel-level baseline with calibrated threshold/model selection
+      using separated validation data.
+    acceptance_criteria:
+    - No evaluation leakage into threshold selection.
+    - Predictions respect invalid masks.
+    - Tests validate output mask and probability/score semantics.
+  - id: T07
+    title: Spatial segmentation cleanup
+    instruction: Add connected-component/morphological-style cleanup using available scientific tools.
+    acceptance_criteria:
+    - Tiny-noise removal does not erase configured minimum true regions.
+    - Invalid areas stay invalid.
+    - Tests cover isolated noise and adjacent change regions.
+  - id: T08
+    title: Spatial evaluation
+    instruction: Implement confusion metrics plus region/area-oriented summaries.
+    acceptance_criteria:
+    - Zero-change scenes are handled without exceptions or misleading division.
+    - All metrics derive from predicted and ground-truth masks.
+    - Tests independently verify confusion counts.
+  - id: T09
+    title: End-to-end experiment runner
+    instruction: Create a seeded experiment over varying cloud, illumination, misregistration and change
+      severity.
+    acceptance_criteria:
+    - Each run records its configuration/seed.
+    - Outputs include actual JSON/CSV metrics.
+    - Integration test completes offline on a small scene.
+  - title: Autonomous ground-robot validation planner
+    instruction: Use detected change regions to plan a simulation-only ground-robot validation route over
+      a gridded synthetic scene. Combine change confidence, traversal cost, and route length so the robot
+      prioritizes informative regions without entering blocked terrain.
+    acceptance_criteria:
+    - A deterministic route planner converts change regions into prioritized validation targets and a
+      collision-free grid route.
+    - The objective balances change confidence, traversal cost, and travel distance with documented weights.
+    - Tests cover blocked targets, tied priorities, and a scenario where higher-confidence change changes
+      the route.
+    id: T10
+  - id: T11
+    title: Documentation and reproducibility
+    instruction: Document data flow, spectral assumptions, evaluation caveats and future public-dataset
+      adapters.
+    acceptance_criteria:
+    - No fabricated real-world accuracy claims.
+    - README contains a complete local example.
+    - Limitations include synthetic domain gap and registration assumptions.
+- id: satellite-attitude-estimation
+  title: Satellite Attitude Estimation Sandbox
+  summary: Build a deterministic spacecraft attitude simulation and estimation sandbox with quaternion
+    dynamics, synthetic sensors, filter baselines, numerical validation and Monte Carlo evaluation.
+  domains:
+  - robotics
+  - data processing
+  - satellite systems
+  - orbital mechanics
+  - AI/ML
+  tasks:
+  - id: T01
+    title: Quaternion mathematics core
+    instruction: Implement normalized quaternion operations, rotations and explicit conventions.
+    acceptance_criteria:
+    - Quaternion ordering/frame convention is documented.
+    - Normalization and inverse/composition properties are tested.
+    - Near-zero invalid quaternions fail clearly.
+  - id: T02
+    title: Attitude dynamics simulator
+    instruction: Implement a simple seeded angular-rate/attitude propagation model suitable for estimator
+      testing.
+    acceptance_criteria:
+    - Integration timestep and units are validated.
+    - Quaternion norm remains controlled.
+    - Tests cover zero-rate and constant-axis rotation.
+  - id: T03
+    title: Synthetic sensor models
+    instruction: Add gyro plus coarse vector-observation sensor models with configurable noise/bias/dropouts.
+    acceptance_criteria:
+    - Noise generation is seedable.
+    - Sensor units/frames are explicit.
+    - Tests verify zero-noise limits and dropout behavior.
+  - id: T04
+    title: Gyro-only propagation baseline
+    instruction: Build a baseline estimator using gyro integration and covariance/error tracking.
+    acceptance_criteria:
+    - Estimator output remains normalized.
+    - Bias/noise assumptions are explicit.
+    - Tests expose expected drift under injected bias rather than hiding it.
+  - id: T05
+    title: Vector-observation correction
+    instruction: Implement a numerically stable attitude correction from synthetic reference/body vectors.
+    acceptance_criteria:
+    - Degenerate/collinear observations are handled explicitly.
+    - Correction reduces controlled orientation error in tests.
+    - No ground-truth attitude is used as estimator input.
+  - id: T06
+    title: Filter fusion pipeline
+    instruction: Combine propagation and correction into a documented attitude-estimation filter.
+    acceptance_criteria:
+    - Prediction/update cadence can differ.
+    - Missing measurements degrade gracefully.
+    - Tests validate covariance/error-state dimensions and normalization.
+  - id: T07
+    title: Robustness scenarios
+    instruction: Add bias drift, outliers and sensor dropout scenarios plus robust gating.
+    acceptance_criteria:
+    - Gating threshold semantics are documented.
+    - Rejected measurements are observable in diagnostics.
+    - Tests include accepted and rejected measurement cases.
+  - id: T08
+    title: Attitude error metrics
+    instruction: Implement quaternion/angular error metrics and time-series summaries.
+    acceptance_criteria:
+    - Quaternion sign ambiguity is handled correctly.
+    - Angles use explicit units.
+    - Tests verify identical and known-angle rotations.
+  - id: T09
+    title: Monte Carlo evaluation
+    instruction: Run seeded multi-scenario estimator evaluations with actual aggregate metrics.
+    acceptance_criteria:
+    - Every trial stores seed/config.
+    - Aggregate statistics are computed, not hard-coded.
+    - Small Monte Carlo integration test is deterministic.
+  - title: Learned residual sensor-bias estimator
+    instruction: Add a lightweight deterministic ML residual model trained only on synthetic attitude-sensor
+      sequences to estimate gyro bias or correction residuals, integrate it as an optional estimator aid,
+      and compare it fairly with the non-ML baseline.
+    acceptance_criteria:
+    - A reproducible ML residual/bias estimator is trained from synthetic features with a fixed seed and
+      no leakage from evaluation data.
+    - The fusion pipeline can enable or disable the learned correction without changing the baseline API.
+    - Tests verify determinism, shape/unit consistency, and that evaluation reports both baseline and
+      ML-assisted metrics without fabricated claims.
+    id: T10
+  - id: T11
+    title: Documentation and demo
+    instruction: Provide architecture, frames/conventions, equations/assumptions, limitations and a reproducible
+      demo.
+    acceptance_criteria:
+    - README clearly states this is a simplified simulation.
+    - A single offline command reproduces a small run.
+    - Documentation explains what would be needed for real flight-grade estimation.
+- id: ground-station-contact-scheduler
+  title: Ground-Station Pass & Contact Scheduler
+  summary: Create an offline scheduling laboratory that turns synthetic satellite pass windows, priorities
+    and station constraints into feasible contact plans with deterministic heuristics and repair strategies.
+  domains:
+  - AI/ML
+  - data processing
+  - satellite systems
+  - orbital mechanics
+  - robotics
+  tasks:
+  - id: T01
+    title: Contact-window data model
+    instruction: Define validated satellites, ground stations, pass windows, priorities and resource constraints
+      with a seeded scenario generator.
+    acceptance_criteria:
+    - Time intervals are well-formed and timezone/epoch semantics are explicit.
+    - Scenario generation is deterministic.
+    - Tests reject overlapping-invalid or negative-duration inputs where appropriate.
+  - id: T02
+    title: Feasibility engine
+    instruction: Implement station/satellite conflict and setup/teardown feasibility checks.
+    acceptance_criteria:
+    - All pairwise resource conflicts have explicit rules.
+    - Boundary-touching intervals follow documented semantics.
+    - Tests cover each conflict type.
+  - id: T03
+    title: Greedy baseline scheduler
+    instruction: Implement a deterministic priority/value heuristic baseline.
+    acceptance_criteria:
+    - Every emitted schedule is feasible by the feasibility engine.
+    - Tie-breaking is deterministic.
+    - Tests cover competing passes and empty scenarios.
+  - id: T04
+    title: Objective model
+    instruction: Define transparent objective components for priority, duration, fairness and missed contacts.
+    acceptance_criteria:
+    - Objective units/weights are explicit.
+    - Score recomputation from a schedule is deterministic.
+    - Tests verify monotonic examples and penalties.
+  - id: T05
+    title: Local improvement search
+    instruction: Add bounded swap/move local search over feasible schedules.
+    acceptance_criteria:
+    - Search never accepts infeasible candidates.
+    - Best-known objective never degrades from baseline.
+    - Tests verify termination and deterministic output.
+  - id: T06
+    title: Outage and repair simulation
+    instruction: Inject station outages and repair an existing plan.
+    acceptance_criteria:
+    - Outage-overlapping contacts are removed/reassigned.
+    - Repair preserves unaffected feasible contacts when possible.
+    - Tests cover full-station and partial-window outages.
+  - id: T07
+    title: Demand/fairness diagnostics
+    instruction: Add per-satellite service statistics and fairness diagnostics.
+    acceptance_criteria:
+    - Statistics derive from scheduled windows and requested demand.
+    - Zero-demand entities are handled explicitly.
+    - Tests validate simple hand-computable cases.
+  - id: T08
+    title: Rolling-horizon scheduler
+    instruction: Implement a deterministic rolling-horizon simulation for newly arriving windows.
+    acceptance_criteria:
+    - Committed-horizon semantics are explicit.
+    - No past/committed contact is silently rewritten.
+    - Tests compare multiple update steps.
+  - id: T09
+    title: Scenario benchmark harness
+    instruction: Evaluate heuristics on seeded small/medium synthetic scenarios with actual objective/feasibility
+      metrics.
+    acceptance_criteria:
+    - Every result includes scenario seed/configuration.
+    - All reported schedules pass feasibility validation.
+    - Integration benchmark remains small enough for CI.
+  - title: Robotic antenna slew and pointing simulator
+    instruction: Model a simulation-only steerable ground-station antenna as a constrained robotic pointing
+      system. Add azimuth/elevation slew-time and settling constraints to contact feasibility and rolling-horizon
+      scheduling without any hardware-control interface.
+    acceptance_criteria:
+    - A deterministic kinematic antenna model computes feasible transitions using bounded slew rates and
+      settling time.
+    - The scheduler rejects or penalizes contacts that violate simulated pointing-transition constraints.
+    - Tests cover wrap-around azimuth, infeasible fast retargeting, and a schedule changed by antenna
+      motion constraints.
+    id: T10
+  - id: T11
+    title: Documentation and export
+    instruction: Add machine-readable schedule export and thorough algorithm/assumption/limitation documentation.
+    acceptance_criteria:
+    - Export round-trips without losing identifiers/times.
+    - README includes a reproducible example.
+    - No claim of optimality is made unless proven by the implemented method.
+- id: orbital-debris-conjunction-risk
+  title: Orbital Debris Conjunction-Risk Laboratory
+  summary: Build a safe offline simulation for screening synthetic orbital-object trajectories, estimating
+    close approaches with uncertainty, ranking conjunction risk, and evaluating alert thresholds without
+    operational maneuver control.
+  domains:
+  - AI/ML
+  - data processing
+  - satellite systems
+  - orbital mechanics
+  - robotics
+  tasks:
+  - id: T01
+    title: Synthetic orbital-state data model
+    instruction: Define simplified Cartesian orbital-state/time/covariance structures and a seeded encounter
+      generator.
+    acceptance_criteria:
+    - Units/reference-frame assumptions are explicit.
+    - Covariance inputs are validated for shape/symmetry/non-negative diagonal.
+    - Tests cover deterministic encounter generation and invalid states.
+  - id: T02
+    title: Trajectory propagation baseline
+    instruction: Implement a clearly simplified offline propagation model suitable for relative-motion
+      experiments.
+    acceptance_criteria:
+    - Model limitations are documented and no flight-grade claim is made.
+    - Time grids are monotonic and deterministic.
+    - Tests cover zero-duration and repeatability.
+  - id: T03
+    title: Closest-approach screening
+    instruction: Compute coarse/refined time of closest approach and miss distance from synthetic trajectories.
+    acceptance_criteria:
+    - Search interval and refinement behavior are documented.
+    - Known synthetic crossing cases recover expected approximate TCA.
+    - No maneuver recommendation is generated.
+  - id: T04
+    title: Relative-encounter geometry
+    instruction: Build encounter-frame relative position/velocity features.
+    acceptance_criteria:
+    - Frame construction handles near-degenerate geometry explicitly.
+    - Feature units/names are stable.
+    - Tests check orthogonality/norm properties where applicable.
+  - id: T05
+    title: Uncertainty projection
+    instruction: Project simplified state uncertainty into encounter geometry with numerical safeguards.
+    acceptance_criteria:
+    - Invalid/non-finite covariance fails explicitly.
+    - Projected covariance remains symmetric within tolerance.
+    - Tests cover diagonal and correlated examples.
+  - id: T06
+    title: Risk score baseline
+    instruction: Create a transparent non-operational conjunction risk score/proxy using miss distance
+      and uncertainty features.
+    acceptance_criteria:
+    - Score semantics/range are documented as a research proxy, not collision probability unless mathematically
+      implemented.
+    - Monotonic controlled cases behave sensibly.
+    - Tests cover extreme distances and uncertainties.
+  - id: T07
+    title: Alert threshold calibration
+    instruction: Calibrate alert thresholds on seeded synthetic encounters without evaluation leakage.
+    acceptance_criteria:
+    - Calibration/evaluation sets are separated.
+    - Precision/recall/false-alert metrics are computed from labels.
+    - Threshold configuration is reproducible.
+  - id: T08
+    title: Explainability and ranking
+    instruction: Rank encounters and expose feature-level reasons for elevated scores.
+    acceptance_criteria:
+    - Explanations remain descriptive and avoid causal/operational claims.
+    - Stable ordering/tie behavior is documented.
+    - Tests cover ranking consistency.
+  - id: T09
+    title: Monte Carlo encounter evaluation
+    instruction: Run seeded uncertainty perturbations and summarize alert stability.
+    acceptance_criteria:
+    - Actual sample statistics are computed from simulation.
+    - Seed/sample count are exported with results.
+    - CI-size experiment is deterministic.
+  - title: Autonomous avoidance decision-support simulator
+    instruction: Create a simulation-only autonomous decision-support layer that evaluates a bounded set
+      of hypothetical avoidance maneuvers for a protected spacecraft, comparing post-maneuver encounter
+      risk, delta-v proxy, and operational constraints. It must never output real vehicle commands or
+      target other objects.
+    acceptance_criteria:
+    - A deterministic candidate evaluator ranks bounded hypothetical self-protective maneuvers using risk
+      reduction and cost proxies.
+    - The output is explicitly decision-support/simulation data and contains no physical command or weaponization
+      interface.
+    - Tests cover no-maneuver preference for low risk, constrained rejection, and improved ranking when
+      one candidate reduces synthetic risk.
+    id: T10
+  - id: T11
+    title: Documentation and safe-use boundaries
+    instruction: Document equations, simplifications, limitations, reproducibility and why the software
+      must not drive real collision-avoidance maneuvers.
+    acceptance_criteria:
+    - README includes an offline synthetic demo.
+    - No operational maneuver/control output exists.
+    - All reported example metrics are generated by executable code.
+- id: satellite-prior-autonomous-mapping
+  title: Satellite-Prior Autonomous Mapping & Sensor Fusion
+  summary: Build a simulated mobile-robot mapping pipeline that uses a synthetic satellite-derived prior
+    map together with local range/odometry observations to estimate pose, update occupancy beliefs, and
+    quantify map consistency.
+  domains:
+  - AI/ML
+  - robotics
+  - data processing
+  - satellite systems
+  - remote sensing
+  tasks:
+  - id: T01
+    title: Prior-map and robot-world simulator
+    instruction: Create a seeded 2D world, imperfect satellite-like prior occupancy/risk map, robot trajectory
+      and ground truth.
+    acceptance_criteria:
+    - Prior error is configurable and distinct from ground truth.
+    - Simulation is deterministic under a seed.
+    - Tests validate dimensions and controlled prior-error cases.
+  - id: T02
+    title: Local sensor simulator
+    instruction: Add offline range-like observations and noisy odometry with dropouts/outliers.
+    acceptance_criteria:
+    - Sensor geometry/units are documented.
+    - Noise/dropout generation is seeded.
+    - Tests cover zero-noise and obstacle intersection cases.
+  - id: T03
+    title: Pose prediction model
+    instruction: Implement a 2D probabilistic pose prediction baseline from odometry.
+    acceptance_criteria:
+    - Angle wrapping and covariance update are explicit.
+    - Covariance remains symmetric with valid dimensions.
+    - Tests cover straight/turning motion.
+  - id: T04
+    title: Satellite-prior likelihood
+    instruction: Implement a pose-likelihood term comparing local observations to the imperfect prior
+      map.
+    acceptance_criteria:
+    - Unknown/out-of-map areas are handled explicitly.
+    - Likelihood is numerically stable.
+    - Tests show controlled better/worse pose hypotheses produce sensible relative scores.
+  - id: T05
+    title: Pose correction / particle-style estimator
+    instruction: Fuse prediction and prior/local evidence with a lightweight deterministic-seeded particle-style
+      estimator.
+    acceptance_criteria:
+    - Weights normalize safely under poor likelihoods.
+    - Resampling is seedable.
+    - Tests cover weight collapse and known-offset recovery scenario.
+  - id: T06
+    title: Occupancy belief update
+    instruction: Update local occupancy beliefs from observations while retaining provenance of satellite
+      prior vs local evidence.
+    acceptance_criteria:
+    - Probabilities remain bounded.
+    - Unknown cells are distinguishable from free cells.
+    - Tests verify repeated consistent/conflicting observations.
+  - id: T07
+    title: Prior-conflict detection
+    instruction: Detect regions where local observations repeatedly contradict the satellite prior.
+    acceptance_criteria:
+    - Conflict confidence depends on evidence count/strength.
+    - Single noisy observation cannot automatically overwrite high-confidence prior without policy.
+    - Tests cover persistent and transient disagreement.
+  - id: T08
+    title: Replanning over fused map
+    instruction: Plan/replan a simulated route using fused occupancy/risk beliefs.
+    acceptance_criteria:
+    - Planner never traverses cells currently considered impassable.
+    - Replanning triggers are explicit and deterministic.
+    - Tests cover newly discovered obstacle.
+  - id: T09
+    title: Mapping/localization evaluation
+    instruction: Compute trajectory error, map confusion metrics and prior-correction statistics on seeded
+      scenarios.
+    acceptance_criteria:
+    - Metrics derive from ground truth only for evaluation, never estimator input.
+    - Zero-denominator cases are safe.
+    - Integration test runs a small full scenario offline.
+  - id: T10
+    title: Experiment suite and documentation
+    instruction: Add multi-scenario experiments and document architecture, uncertainty, limitations and
+      potential public EO/robotics data adapters.
+    acceptance_criteria:
+    - Results include seeds/configs and are machine-readable.
+    - README provides one reproducible offline command.
+    - Documentation clearly separates simulation from real-world autonomy.
