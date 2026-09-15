@@ -1,0 +1,211 @@
+name: OrbitalForge Autonomous Research Builder
+
+on:
+  # GitHub scheduled workflows are best-effort. Offset from minute 0 reduces peak-hour congestion.
+  schedule:
+    - cron: "7-57/10 * * * *"
+  workflow_dispatch:
+  # The initial upload/configuration push starts setup immediately. Autonomous project/state commits
+  # do not touch these paths, and pushes made with GITHUB_TOKEN do not recursively trigger workflows.
+  push:
+    paths:
+      - ".github/workflows/autoforge.yml"
+      - "src/orbitalforge/**"
+      - "config/forge.yml"
+      - "catalog/projects.yml"
+      - "pyproject.toml"
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: orbitalforge-autonomous-builder-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  advance:
+    if: >-
+      ${{ vars.FORGE_ENABLED != 'false' &&
+          (github.event_name == 'schedule' ||
+           github.ref_name == github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check AI credential
+        id: credential
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -n "$OPENAI_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create one-time setup issue when API key is missing
+        if: steps.credential.outputs.configured != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if ! count="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search 'OrbitalForge setup required in:title' --json number --jq 'length' 2>/dev/null)"; then
+            echo "::warning::OPENAI_API_KEY is missing and repository Issues are unavailable. Add the secret under Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          if [[ "$count" == "0" ]]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "OrbitalForge setup required: add OPENAI_API_KEY" \
+              --body $'OrbitalForge is installed and its scheduler is active, but AI work cannot start until the repository secret `OPENAI_API_KEY` is configured.\n\nGo to **Settings → Secrets and variables → Actions → New repository secret**, create `OPENAI_API_KEY`, and the next scheduled run will start automatically. Do not commit the key to the repository.' \
+              || echo "::warning::Could not create the setup issue. Add OPENAI_API_KEY manually."
+          fi
+
+      - name: Checkout default branch safely
+        if: steps.credential.outputs.configured == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        if: steps.credential.outputs.configured == 'true'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install OrbitalForge
+        if: steps.credential.outputs.configured == 'true'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --retries 5 --timeout 30 -e ".[dev]"
+
+      - name: Preflight repository and configuration
+        if: steps.credential.outputs.configured == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -m orbitalforge.cli preflight --root .
+
+      - name: Advance one bounded research work unit
+        id: forge
+        if: steps.credential.outputs.configured == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FORGE_WORKER_MODEL: ${{ vars.FORGE_WORKER_MODEL || 'gpt-5.6-sol' }}
+          FORGE_REVIEWER_MODEL: ${{ vars.FORGE_REVIEWER_MODEL || 'gpt-5.6-sol' }}
+          FORGE_PLANNER_MODEL: ${{ vars.FORGE_PLANNER_MODEL || 'gpt-5.6-sol' }}
+          FORGE_FALLBACK_MODEL: ${{ vars.FORGE_FALLBACK_MODEL || 'gpt-5.6-terra' }}
+          FORGE_WORKER_REASONING_EFFORT: ${{ vars.FORGE_WORKER_REASONING_EFFORT || 'high' }}
+          FORGE_RECOVERY_REASONING_EFFORT: ${{ vars.FORGE_RECOVERY_REASONING_EFFORT || 'xhigh' }}
+          FORGE_REVIEWER_REASONING_EFFORT: ${{ vars.FORGE_REVIEWER_REASONING_EFFORT || 'xhigh' }}
+          FORGE_PLANNER_REASONING_EFFORT: ${{ vars.FORGE_PLANNER_REASONING_EFFORT || 'xhigh' }}
+        run: python -m orbitalforge.cli tick --root .
+
+      - name: Verify trusted orchestration code still compiles
+        if: steps.credential.outputs.configured == 'true'
+        run: python -m compileall -q src/orbitalforge
+
+      - name: Publish concise run summary
+        if: steps.credential.outputs.configured == 'true' && always()
+        shell: bash
+        run: |
+          echo "## OrbitalForge state" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f .autoforge/state.json ]]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            python -m orbitalforge.cli status --root . >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit only validated meaningful progress/state
+        if: steps.credential.outputs.configured == 'true' && success()
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No validated change; nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # A model/test process must never smuggle changes into the trusted control plane. The
+          # autonomous engine is expected to mutate only these durable data/project paths.
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            case "$path" in
+              .autoforge/state.json|PROJECTS.md|projects/active/*|projects/completed/*|catalog/generated/*) ;;
+              *)
+                echo "Refusing unexpected autonomous change outside the write allowlist: $path"
+                exit 1
+                ;;
+            esac
+          done < <(
+            { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u
+          )
+
+          git add -A
+          git diff --cached --check
+
+          if git diff --cached --name-only | grep -E '(^|/)(\.env|id_rsa|id_ed25519|credentials|secrets|private_key)(\.|/|$)' ; then
+            echo "Refusing to commit a possible credential file."
+            exit 1
+          fi
+
+          project_id="$(python -c 'import json; s=json.load(open(".autoforge/state.json")); print(s.get("last_project_id") or s.get("current_project_id") or "research")')"
+          task_id="$(python -c 'import json; s=json.load(open(".autoforge/state.json")); print(s.get("last_task_id") or "state")')"
+          git commit -m "feat(${project_id}): advance ${task_id}"
+
+          # Credentials are introduced only after generated code/tests have finished executing.
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          branch="$GITHUB_REF_NAME"
+          for attempt in 1 2; do
+            git fetch origin "$branch"
+            if ! git rebase "origin/$branch"; then
+              git rebase --abort || true
+              echo "Remote changed incompatibly; a clean future run will recompute from the new default branch."
+              exit 1
+            fi
+            if git push origin "HEAD:$branch"; then
+              exit 0
+            fi
+            echo "Push raced with another update; retrying once after refetch."
+          done
+          echo "Push failed after bounded retry."
+          exit 1
+
+      - name: Open or refresh one operational failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          title="OrbitalForge automation needs attention"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body="The latest OrbitalForge run failed due to an infrastructure, API, installation, or repository-write error. Generated project changes are not committed unless validation succeeds.\n\nLatest failed run: ${run_url}\n\nThe next scheduled run will retry automatically."
+          if issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null)" && [[ -n "$issue" ]]; then
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body" || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" || true
+          fi
+
+      - name: Close resolved operational failure issue
+        if: steps.credential.outputs.configured == 'true' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          title="OrbitalForge automation needs attention"
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          if [[ -n "$issue" ]]; then
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Automation recovered successfully; closing this operational alert." || true
+          fi
