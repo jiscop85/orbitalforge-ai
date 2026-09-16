@@ -3,7 +3,7 @@ name: OrbitalForge Autonomous Research Builder
 on:
   # GitHub scheduled workflows are best-effort. Offset from minute 0 reduces peak-hour congestion.
   schedule:
-    - cron: "7,37 * * * *"
+    - cron:  "17 * * * *"
   workflow_dispatch:
   # The initial upload/configuration push starts setup immediately. Autonomous project/state commits
   # do not touch these paths, and pushes made with GITHUB_TOKEN do not recursively trigger workflows.
@@ -103,10 +103,11 @@ jobs:
           FORGE_REVIEWER_MODEL: ${{ vars.FORGE_REVIEWER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_PLANNER_MODEL: ${{ vars.FORGE_PLANNER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_FALLBACK_MODEL: ${{ vars.FORGE_FALLBACK_MODEL || '' }}
-          FORGE_WORKER_REASONING_EFFORT: ${{ vars.FORGE_WORKER_REASONING_EFFORT || 'high' }}
-          FORGE_RECOVERY_REASONING_EFFORT: ${{ vars.FORGE_RECOVERY_REASONING_EFFORT || 'high' }}
-          FORGE_REVIEWER_REASONING_EFFORT: ${{ vars.FORGE_REVIEWER_REASONING_EFFORT || 'high' }}
-          FORGE_PLANNER_REASONING_EFFORT: ${{ vars.FORGE_PLANNER_REASONING_EFFORT || 'high' }}
+          FORGE_MAX_OUTPUT_TOKENS: ${{ vars.FORGE_MAX_OUTPUT_TOKENS || '3000' }}
+          FORGE_WORKER_REASONING_EFFORT: ${{ vars.FORGE_WORKER_REASONING_EFFORT || 'none' }}
+          FORGE_RECOVERY_REASONING_EFFORT: ${{ vars.FORGE_RECOVERY_REASONING_EFFORT || 'none' }}
+          FORGE_REVIEWER_REASONING_EFFORT: ${{ vars.FORGE_REVIEWER_REASONING_EFFORT || 'none' }}
+          FORGE_PLANNER_REASONING_EFFORT: ${{ vars.FORGE_PLANNER_REASONING_EFFORT || 'none' }}
         run: python -m orbitalforge.cli tick --root .
 
       - name: Verify trusted orchestration code still compiles
