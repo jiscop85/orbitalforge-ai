@@ -99,7 +99,7 @@ jobs:
         if: steps.credential.outputs.configured == 'true'
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          FORGE_WORKER_MODEL: ${{ vars.FORGE_WORKER_MODEL || 'openai/gpt-oss-120b' }}
+          FORGE_WORKER_MODEL: ${{ vars.FORGE_WORKER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_REVIEWER_MODEL: ${{ vars.FORGE_REVIEWER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_PLANNER_MODEL: ${{ vars.FORGE_PLANNER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_FALLBACK_MODEL: ${{ vars.FORGE_FALLBACK_MODEL || '' }}
