@@ -75,8 +75,8 @@ def render_projects_index(root: Path, state: ForgeState, catalog: list[Blueprint
     lines = [
         "# OrbitalForge research program",
         "",
-        f"Validated work units: **{state.successful_ticks}**  ",
-        f"Rejected/rolled-back candidates: **{state.rejected_ticks}**  ",
+        f"Validated work units: **{state.successful_ticks}**",
+        f"Rejected/rolled-back candidates: **{state.rejected_ticks}**",
         f"Model usage recorded: **{state.total_input_tokens:,} input / {state.total_output_tokens:,} output tokens**",
         "",
     ]
