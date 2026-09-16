@@ -1,28 +1,28 @@
 version: 4
-schedule_minutes: 30
+schedule_minutes: 60
 
 # Quality-first defaults. Repository variables can override the model/reasoning fields.
-worker_model: openai/gpt-oss-120b
+worker_model: qwen/qwen3.8-27b
 reviewer_model: qwen/qwen3.8-27b
 planner_model: qwen/qwen3.8-27b
 fallback_model: ""
-worker_reasoning_effort: high
-recovery_reasoning_effort: high
-reviewer_reasoning_effort: high
-planner_reasoning_effort: high
+worker_reasoning_effort: none
+recovery_reasoning_effort: none
+reviewer_reasoning_effort: none
+planner_reasoning_effort: none
 
 # Bounded generation/context budgets. The worker emits complete replacement files, so output needs
 # enough room for real code while still preventing runaway generations.
-max_output_tokens: 1800
+max_output_tokens: 3000
 reviewer_max_output_tokens: 900
 planner_max_output_tokens: 1400
-max_context_chars: 6500
-max_context_files: 6
-max_context_file_chars: 2500
+max_context_chars: 4500
+max_context_files: 4
+max_context_file_chars: 1800
 max_audit_context_chars: 9000
 max_audit_context_files: 8
 max_diff_chars_for_review: 4500
-max_operations_per_tick: 4
+max_operations_per_tick: 1
 max_file_bytes: 60000
 max_total_write_bytes: 120000
 quality_timeout_seconds: 240
