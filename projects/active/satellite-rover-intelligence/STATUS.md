@@ -15,8 +15,8 @@
 
 ## Current automated review guidance
 
-Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/projects/active/satellite_rover_intelligence/tests/test_terrain.py failed (2):
-error: Failed to parse projects/active/satellite_rover_intelligence/tests/test_terrain.py:59:22: unexpected EOF while parsing
+Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/projects/active/satellite-rover-intelligence/projects/active/satellite_rover_intelligence/tests/test_terrain.py failed (2):
+error: Failed to parse projects/active/satellite-rover-intelligence/projects/active/satellite_rover_intelligence/tests/test_terrain.py:18:15: Expected `(`, found newline
 
 
 > Progress advances only after security, quality, test, and review gates.
