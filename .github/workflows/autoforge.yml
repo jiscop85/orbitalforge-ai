@@ -136,8 +136,8 @@ jobs:
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "jiscop85"
+          git config user.email "127202191+jiscop85@users.noreply.github.com"
 
           # A model/test process must never smuggle changes into the trusted control plane. The
           # autonomous engine is expected to mutate only these durable data/project paths.
