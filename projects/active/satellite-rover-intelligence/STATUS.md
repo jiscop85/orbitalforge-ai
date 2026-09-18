@@ -15,6 +15,6 @@
 
 ## Current automated review guidance
 
-Previous attempt was rolled back by automated validation: Unapproved third-party import 'satellite_rover_intelligence' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/projects/active/satellite-rover-intelligence/projects/active/satellite_rover_intelligence/tests/test_terrain.py
+Previous attempt was rolled back by automated validation: Worker exceeded max_operations_per_tick
 
 > Progress advances only after security, quality, test, and review gates.
