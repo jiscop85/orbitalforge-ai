@@ -1,12 +1,10 @@
 name: OrbitalForge Autonomous Research Builder
 
 on:
-  # GitHub scheduled workflows are best-effort. Offset from minute 0 reduces peak-hour congestion.
   schedule:
-    - cron:  "17 * * * *"
+    # GitHub scheduled workflows are best-effort; offset from minute 0 reduces congestion.
+    - cron: "17 * * * *"
   workflow_dispatch:
-  # The initial upload/configuration push starts setup immediately. Autonomous project/state commits
-  # do not touch these paths, and pushes made with GITHUB_TOKEN do not recursively trigger workflows.
   push:
     paths:
       - ".github/workflows/autoforge.yml"
@@ -34,7 +32,7 @@ jobs:
           (github.event_name == 'schedule' ||
            github.ref_name == github.event.repository.default_branch) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 25
 
     steps:
       - name: Check AI credential
@@ -49,23 +47,22 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create one-time setup issue when API key is missing
+      - name: Create setup issue when API key is missing
         if: steps.credential.outputs.configured != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if ! count="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
-            --search 'OrbitalForge setup required in:title' --json number --jq 'length' 2>/dev/null)"; then
-            echo "::warning::GROQ_API_KEY is missing and repository Issues are unavailable. Add the secret under Settings → Secrets and variables → Actions."
+          title="OrbitalForge setup required: add GROQ_API_KEY"
+          if issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null)" \
+            && [[ -n "$issue" ]]; then
             exit 0
           fi
-          if [[ "$count" == "0" ]]; then
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "OrbitalForge setup required: add GROQ_API_KEY" \
-              --body $'OrbitalForge is installed and its scheduler is active, but AI work cannot start until the repository secret `GROQ_API_KEY` is configured.\n\nGo to **Settings → Secrets and variables → Actions → New repository secret**, create `GROQ_API_KEY`, and the next scheduled run will start automatically. Do not commit the key to the repository.' \
-              || echo "::warning::Could not create the setup issue. Add GROQ_API_KEY manually."
-          fi
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body $'Add the repository secret `GROQ_API_KEY` under Settings → Secrets and variables → Actions. Do not commit the key to the repository.' \
+            || true
 
       - name: Checkout default branch safely
         if: steps.credential.outputs.configured == 'true'
@@ -83,10 +80,7 @@ jobs:
 
       - name: Install OrbitalForge
         if: steps.credential.outputs.configured == 'true'
-        shell: bash
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --retries 5 --timeout 30 -e ".[dev]"
+        run: python -m pip install --retries 5 --timeout 30 -e ".[dev]"
 
       - name: Preflight repository and configuration
         if: steps.credential.outputs.configured == 'true'
@@ -103,7 +97,7 @@ jobs:
           FORGE_REVIEWER_MODEL: ${{ vars.FORGE_REVIEWER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_PLANNER_MODEL: ${{ vars.FORGE_PLANNER_MODEL || 'qwen/qwen3.8-27b' }}
           FORGE_FALLBACK_MODEL: ${{ vars.FORGE_FALLBACK_MODEL || '' }}
-          FORGE_MAX_OUTPUT_TOKENS: ${{ vars.FORGE_MAX_OUTPUT_TOKENS || '800' }}
+          FORGE_MAX_OUTPUT_TOKENS: ${{ vars.FORGE_MAX_OUTPUT_TOKENS || '900' }}
           FORGE_WORKER_REASONING_EFFORT: ${{ vars.FORGE_WORKER_REASONING_EFFORT || 'none' }}
           FORGE_RECOVERY_REASONING_EFFORT: ${{ vars.FORGE_RECOVERY_REASONING_EFFORT || 'none' }}
           FORGE_REVIEWER_REASONING_EFFORT: ${{ vars.FORGE_REVIEWER_REASONING_EFFORT || 'none' }}
@@ -114,7 +108,7 @@ jobs:
         if: steps.credential.outputs.configured == 'true'
         run: python -m compileall -q src/orbitalforge
 
-      - name: Publish concise run summary
+      - name: Publish run summary
         if: steps.credential.outputs.configured == 'true' && always()
         shell: bash
         run: |
@@ -125,7 +119,7 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Commit only validated meaningful progress/state
+      - name: Commit validated progress or durable state
         if: steps.credential.outputs.configured == 'true' && success()
         shell: bash
         env:
@@ -139,8 +133,6 @@ jobs:
           git config user.name "jiscop85"
           git config user.email "127202191+jiscop85@users.noreply.github.com"
 
-          # A model/test process must never smuggle changes into the trusted control plane. The
-          # autonomous engine is expected to mutate only these durable data/project paths.
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
             case "$path" in
@@ -164,27 +156,31 @@ jobs:
 
           project_id="$(python -c 'import json; s=json.load(open(".autoforge/state.json")); print(s.get("last_project_id") or s.get("current_project_id") or "research")')"
           task_id="$(python -c 'import json; s=json.load(open(".autoforge/state.json")); print(s.get("last_task_id") or "state")')"
-          git commit -m "feat(${project_id}): advance ${task_id}"
+          summary="$(python -c 'import json; s=json.load(open(".autoforge/state.json")); print(s.get("last_summary") or "")')"
+          if [[ "$summary" == *"rejected"* ]]; then
+            message="chore(${project_id}): record ${task_id} retry"
+          else
+            message="feat(${project_id}): advance ${task_id}"
+          fi
+          git commit -m "$message"
 
-          # Credentials are introduced only after generated code/tests have finished executing.
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           branch="$GITHUB_REF_NAME"
           for attempt in 1 2; do
             git fetch origin "$branch"
             if ! git rebase "origin/$branch"; then
               git rebase --abort || true
-              echo "Remote changed incompatibly; a clean future run will recompute from the new default branch."
+              echo "Remote changed incompatibly; a future run will recompute from the latest branch."
               exit 1
             fi
             if git push origin "HEAD:$branch"; then
               exit 0
             fi
-            echo "Push raced with another update; retrying once after refetch."
           done
           echo "Push failed after bounded retry."
           exit 1
 
-      - name: Open or refresh one operational failure issue
+      - name: Open or refresh operational failure issue
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -192,8 +188,10 @@ jobs:
         run: |
           title="OrbitalForge automation needs attention"
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          body="The latest OrbitalForge run failed due to an infrastructure, API, installation, or repository-write error. Generated project changes are not committed unless validation succeeds.\n\nLatest failed run: ${run_url}\n\nThe next scheduled run will retry automatically."
-          if issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null)" && [[ -n "$issue" ]]; then
+          body="The latest OrbitalForge run failed. Generated project changes are not committed unless validation succeeds.\n\nLatest failed run: ${run_url}\n\nThe next scheduled run will retry automatically."
+          if issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null)" \
+            && [[ -n "$issue" ]]; then
             gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body" || true
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" || true
@@ -206,7 +204,9 @@ jobs:
         shell: bash
         run: |
           title="OrbitalForge automation needs attention"
-          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$title in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
           if [[ -n "$issue" ]]; then
-            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Automation recovered successfully; closing this operational alert." || true
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
+              --comment "Automation recovered successfully; closing this operational alert." || true
           fi
