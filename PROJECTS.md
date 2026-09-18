@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **0**
-Rejected/rolled-back candidates: **11**
-Model usage recorded: **17,896 input / 5,144 output tokens**
+Rejected/rolled-back candidates: **12**
+Model usage recorded: **19,841 input / 6,044 output tokens**
 
 ## Active
 
@@ -18,25 +18,18 @@ Model usage recorded: **17,896 input / 5,144 output tokens**
 
 ## Latest gate/audit note
 
-> /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff check /tmp/orbitalforge-rpmpvblq/project/src failed (1):
-I001 [*] Import block is un-sorted or un-formatted
- --> src/terrain.py:1:1
-  |
-1 | / import numpy as np
-2 | | from dataclasses import dataclass
-  | |_________________________________^
-help: Organize imports
-  |
-  - import numpy as np
-1 | from dataclasses import dataclass
-2 |
-3 + import numpy as np
-4 +
-5 |
-  |
+> /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-51q1t_0i/project/src failed (1):
+unformatted: File would be reformatted
+  --> src/terrain.py:51:25
+   |
+50 |     traversability = np.where(mask, elevation, 0.0)
+   -     return TerrainScene(bands=bands, elevation=elevation, mask=mask, traversability=traversability)
+51 +     return TerrainScene(
+52 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
+53 +     )
+   |
 
-Found 1 error.
-[*] 1 fixable with the `--fix` option.
+1 file would be reformatted
 
 
-Last updated: 2026-09-18T15:03:12.012339+00:00
+Last updated: 2026-09-18T21:42:31.074692+00:00
