@@ -25,7 +25,7 @@ max_audit_context_files: 8
 max_diff_chars_for_review: 4500
 
 # Two operations are enough for a compact source + matching test pair.
-max_operations_per_tick: 2
+max_operations_per_tick: 1
 max_file_bytes: 60000
 max_total_write_bytes: 120000
 
