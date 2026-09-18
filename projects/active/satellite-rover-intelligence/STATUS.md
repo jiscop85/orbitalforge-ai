@@ -15,9 +15,25 @@
 
 ## Current automated review guidance
 
-Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/projects/active/satellite-rover-intelligence/src/terrain.py /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/projects/active/satellite-rover-intelligence/tests/test_terrain.py failed (2):
-error: Failed to parse projects/active/satellite-rover-intelligence/src/terrain.py:10:5: missing closing quote in string literal
-1 file reformatted
+Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff check /tmp/orbitalforge-rpmpvblq/project/src failed (1):
+I001 [*] Import block is un-sorted or un-formatted
+ --> src/terrain.py:1:1
+  |
+1 | / import numpy as np
+2 | | from dataclasses import dataclass
+  | |_________________________________^
+help: Organize imports
+  |
+  - import numpy as np
+1 | from dataclasses import dataclass
+2 |
+3 + import numpy as np
+4 +
+5 |
+  |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
 
 
 > Progress advances only after security, quality, test, and review gates.
