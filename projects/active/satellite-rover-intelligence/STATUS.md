@@ -15,18 +15,22 @@
 
 ## Current automated review guidance
 
-Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-96vt9ov5/project/src failed (1):
-unformatted: File would be reformatted
-  --> src/terrain.py:64:25
-   |
-63 |     traversability = np.where(mask, np.clip(elevation, 0.0, 1.0), 0.0)
-   -     return TerrainScene(bands=bands, elevation=elevation, mask=mask, traversability=traversability)
-64 +     return TerrainScene(
-65 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
-66 +     )
-   |
+Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff check /tmp/orbitalforge-3maowwff/project/src failed (1):
+I001 [*] Import block is un-sorted or un-formatted
+ --> src/terrain.py:1:1
+  |
+1 | / from dataclasses import dataclass
+2 | | import numpy as np
+  | |__________________^
+help: Organize imports
+  |
+1 | from dataclasses import dataclass
+2 +
+3 | import numpy as np
+  |
 
-1 file would be reformatted
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
 
 
 > Progress advances only after security, quality, test, and review gates.
