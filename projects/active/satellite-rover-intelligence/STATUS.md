@@ -15,15 +15,15 @@
 
 ## Current automated review guidance
 
-Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-51q1t_0i/project/src failed (1):
+Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-96vt9ov5/project/src failed (1):
 unformatted: File would be reformatted
-  --> src/terrain.py:51:25
+  --> src/terrain.py:64:25
    |
-50 |     traversability = np.where(mask, elevation, 0.0)
+63 |     traversability = np.where(mask, np.clip(elevation, 0.0, 1.0), 0.0)
    -     return TerrainScene(bands=bands, elevation=elevation, mask=mask, traversability=traversability)
-51 +     return TerrainScene(
-52 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
-53 +     )
+64 +     return TerrainScene(
+65 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
+66 +     )
    |
 
 1 file would be reformatted

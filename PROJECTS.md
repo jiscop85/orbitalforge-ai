@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **0**
-Rejected/rolled-back candidates: **12**
-Model usage recorded: **19,841 input / 6,044 output tokens**
+Rejected/rolled-back candidates: **13**
+Model usage recorded: **21,796 input / 6,944 output tokens**
 
 ## Active
 
@@ -18,18 +18,18 @@ Model usage recorded: **19,841 input / 6,044 output tokens**
 
 ## Latest gate/audit note
 
-> /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-51q1t_0i/project/src failed (1):
+> /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff format --check /tmp/orbitalforge-96vt9ov5/project/src failed (1):
 unformatted: File would be reformatted
-  --> src/terrain.py:51:25
+  --> src/terrain.py:64:25
    |
-50 |     traversability = np.where(mask, elevation, 0.0)
+63 |     traversability = np.where(mask, np.clip(elevation, 0.0, 1.0), 0.0)
    -     return TerrainScene(bands=bands, elevation=elevation, mask=mask, traversability=traversability)
-51 +     return TerrainScene(
-52 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
-53 +     )
+64 +     return TerrainScene(
+65 +         bands=bands, elevation=elevation, mask=mask, traversability=traversability
+66 +     )
    |
 
 1 file would be reformatted
 
 
-Last updated: 2026-09-18T21:42:31.074692+00:00
+Last updated: 2026-09-19T18:03:10.572364+00:00
