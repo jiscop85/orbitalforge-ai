@@ -33,21 +33,18 @@ WORK_SCHEMA: dict[str, Any] = {
     "properties": {
         "summary": {"type": "string"},
         "task_complete": {"type": "boolean"},
-        "operations": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "action": {"type": "string", "enum": ["write", "delete"]},
-                    "path": {"type": "string"},
-                    "content": {"type": "string"},
-                },
-                "required": ["action", "path", "content"],
+        "operation": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "action": {"type": "string", "enum": ["write", "delete"]},
+                "path": {"type": "string"},
+                "content": {"type": "string"},
             },
+            "required": ["action", "path", "content"],
         },
     },
-    "required": ["summary", "task_complete", "operations"],
+    "required": ["summary", "task_complete", "operation"],
 }
 
 REVIEW_SCHEMA: dict[str, Any] = {
@@ -129,9 +126,10 @@ must be technically coherent, reproducible offline with synthetic data by defaul
 and decomposable into bounded engineering tasks with objective acceptance criteria.
 """.strip()
 
-# The user's Groq account has returned a 1000-output-token-per-minute limit in real workflow logs.
-# Spacing requests prevents a retry/reviewer call from colliding with the previous request's window.
+# Real workflow logs for this account showed an effective 1000-output-token/minute ceiling.
+# Spacing calls prevents a retry/reviewer call from colliding with the previous minute window.
 _MIN_SECONDS_BETWEEN_MODEL_CALLS = 62.0
+_MAX_SINGLE_FILE_CHARS = 2200
 _last_model_call_at: float | None = None
 
 
@@ -326,11 +324,11 @@ def build_work_unit(
     )
     feedback = reviewer_feedback or "None."
     recovery = (
-        "RECOVERY MODE: previous attempts failed. Use the validation feedback. Do not repeat the "
-        "same failed implementation. Make the smallest complete source-and-test repair that can "
-        "pass now. Set task_complete=false unless every criterion is already satisfied."
+        "RECOVERY MODE: previous attempts failed. Read the validation feedback carefully. Do not "
+        "repeat the failed implementation. Make the smallest complete ONE-FILE repair that can "
+        "pass now. Partial validated progress is preferred."
         if recovery_mode
-        else "Normal bounded implementation mode. Make one small coherent step."
+        else "Normal bounded mode. Make one small coherent ONE-FILE step."
     )
     input_text = f"""
 PROJECT: {blueprint.title}
@@ -346,62 +344,68 @@ PRIOR REVIEW/QUALITY FEEDBACK: {feedback}
 MODE: {recovery}
 
 HARD CONSTRAINTS:
-- Operation paths MUST be relative to PROJECT ROOT.
+- Return exactly ONE operation object. Never return an operations array.
+- The operation path MUST be relative to PROJECT ROOT.
 - Good paths: src/terrain.py, tests/test_terrain.py, README.md.
-- Never include PROJECT ROOT, projects/active/..., or an absolute path in an operation path.
-- At most {config.max_operations_per_tick} file operations.
-- When adding executable Python to a project that has no tests yet, use two compact operations in
-  the same response: one source file and one matching test file.
-- Prefer partial validated progress with task_complete=false over a large implementation.
-- Keep source and tests small enough to fit the response budget. Never truncate code.
-- Every Python string, bracket, function, class, and expression must be completely closed.
+- Never include PROJECT ROOT, projects/active/..., or an absolute path in the operation path.
+- Never create or modify source code and its test in the same run.
+- If the task has no useful source implementation yet, create the smallest useful source file.
+- If useful source exists but matching tests are absent or weak, create/update exactly one test file.
+- If source and tests already exist, improve exactly one file that moves the task forward.
+- Keep the complete replacement content at or below {_MAX_SINGLE_FILE_CHARS} characters.
+- Prefer <=45 lines. Split large designs across modules over multiple ticks.
+- If more work remains, set task_complete=false.
+- A source-code operation must not claim task completion; completion is checked on a later tick.
+- Never truncate code. Every Python string, bracket, function, class, and expression must close.
 - Python 3.11+; prefer standard library. Approved packages: {packages}.
 - No network-dependent code/tests, credentials, subprocess/shell execution, persistence mechanisms,
   physical actuator control, weaponization, binary blobs, or fabricated scientific results.
-- All robotics/control behavior must remain simulation/decision-support only.
+- Robotics/control behavior must remain simulation/decision-support only.
 - Use deterministic random seeds where randomness matters.
-- Executable behavior needs meaningful tests, including scientific/numerical invariants and edge cases.
+- Tests must exercise meaningful behavior, invariants, and edge cases.
 - Inspect existing APIs before adding code; do not duplicate existing implementations.
-- No TODO-only placeholders, pass-only functions, fake metrics, or hard-coded fake research results.
-- If editing a file, return its COMPLETE replacement content.
-- Delete only when deletion is clearly required.
-- Set task_complete=true only when ALL acceptance criteria are satisfied by the resulting project.
-- Keep README/API docs synchronized when behavior changes materially.
+- No TODO-only placeholders, pass-only functions, fake metrics, or hard-coded fake results.
+- If editing an existing file, return its COMPLETE replacement content.
+- Set task_complete=true only when all acceptance criteria are genuinely satisfied and the project
+  already has meaningful tests for the task.
 
 RELEVANT REPOSITORY DATA:
 {context}
 
-Return one concise summary, task_complete, and bounded file operations.
+Return summary, task_complete, and exactly one operation object.
 """.strip()
 
     def validate(raw: dict[str, Any]) -> tuple[str, bool, tuple[FileOperation, ...]]:
-        operations_raw = raw.get("operations", [])
-        if not isinstance(operations_raw, list):
-            raise LLMError("operations must be a list")
-        if not operations_raw:
-            raise LLMError("Worker returned no operations")
-        if len(operations_raw) > config.max_operations_per_tick:
-            raise LLMError("Model returned too many operations")
+        item = raw.get("operation")
+        if not isinstance(item, dict) or item.get("action") not in {"write", "delete"}:
+            raise LLMError("Invalid operation")
 
-        operations: list[FileOperation] = []
-        for item in operations_raw:
-            if not isinstance(item, dict) or item.get("action") not in {"write", "delete"}:
-                raise LLMError("Invalid operation")
-            action = str(item["action"])
-            path = _normalize_operation_path(str(item.get("path", "")), project_rel)
-            if not path:
-                raise LLMError("Operation path is empty")
-            content = str(item.get("content", ""))
-            if action == "write":
-                if not content:
-                    raise LLMError(f"Empty generated file: {path}")
-                _validate_python_content(path, content)
-            operations.append(FileOperation(action=action, path=path, content=content))
+        action = str(item["action"])
+        path = _normalize_operation_path(str(item.get("path", "")), project_rel)
+        if not path:
+            raise LLMError("Operation path is empty")
 
+        content = str(item.get("content", ""))
+        if action == "write":
+            if not content:
+                raise LLMError(f"Empty generated file: {path}")
+            if len(content) > _MAX_SINGLE_FILE_CHARS:
+                raise LLMError(
+                    f"Generated file is too large for one safe tick: {path} "
+                    f"({len(content)} > {_MAX_SINGLE_FILE_CHARS} characters)"
+                )
+            _validate_python_content(path, content)
+
+        operation = FileOperation(action=action, path=path, content=content)
         summary = str(raw.get("summary", "")).strip()
         if not summary:
             raise LLMError("Worker returned an empty summary")
-        return summary[:1000], bool(raw.get("task_complete", False)), tuple(operations)
+
+        complete = bool(raw.get("task_complete", False))
+        if path.startswith("src/"):
+            complete = False
+
+        return summary[:1000], complete, (operation,)
 
     parsed, input_tokens, output_tokens = _call_json(
         config,
