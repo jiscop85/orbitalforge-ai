@@ -150,6 +150,9 @@ def _mark_success(
     state.recent_files = [
         path.relative_to(project).as_posix() for path in touched if path.exists()
     ][-12:]
+    # A validated partial or complete work unit is real progress. Reset the consecutive-attempt
+    # counter so an old failure streak does not keep every later tick in recovery mode forever.
+    state.current_task_attempts = 0
     state.successful_ticks += 1
     state.last_attempt_utc = _now()
     state.last_success_utc = state.last_attempt_utc
@@ -321,7 +324,16 @@ def tick(root: Path) -> str:
     touched: list[Path] = []
     try:
         backups, touched = _apply_operations(project, work.operations, config)
-        quality: QualityReport = run_quality_gate(project, config, touched)
+        # Build-phase partial ticks may temporarily sit between source and test creation. They still
+        # compile, lint and run every test that already exists, but coverage becomes mandatory only
+        # when the worker claims task completion. Final-review repairs are always fully validated.
+        require_full_validation = work.task_complete or state.phase == "final_review"
+        quality: QualityReport = run_quality_gate(
+            project,
+            config,
+            touched,
+            require_tests=require_full_validation,
+        )
     except (ForgeError, SecurityError, QualityError) as exc:
         if backups:
             _rollback(backups)
@@ -342,7 +354,9 @@ def tick(root: Path) -> str:
 
     diff = _diff_from_backups(project, backups, config.max_diff_chars_for_review)
 
-    if state.phase == "build" and (work.task_complete or recovery):
+    # Recovery mode changes the worker prompt, but it must never bypass the worker's completion
+    # claim and advance a roadmap task merely because many earlier attempts failed.
+    if state.phase == "build" and work.task_complete:
         try:
             review_context = collect_context(project, state, task, config)
             review = review_task_completion(
@@ -371,7 +385,6 @@ def tick(root: Path) -> str:
         else:
             state.reviewer_feedback = review.feedback or review.summary
     elif state.phase == "build":
-        # Keep bounded validated partial progress. Recovery eventually forces independent review.
         state.reviewer_feedback = None
 
     _mark_success(state, touched, project, blueprint.id, task.id, work.summary)
