@@ -20,7 +20,10 @@ def validate_repository(root: Path, all_projects: bool = False) -> list[str]:
             active = project_dir(root, blueprint.id)
             completed = completed_dir(root, blueprint.id)
             if active.exists():
-                run_quality_gate(active, config)
+                # Active projects are intentionally incremental. They must compile, lint, pass all
+                # tests that already exist, and satisfy security checks, but they are allowed to be
+                # between source and test-writing ticks and therefore do not enforce final coverage.
+                run_quality_gate(active, config, require_tests=False)
                 messages.append(f"validated active {active.relative_to(root).as_posix()}")
             if completed.exists():
                 run_completion_gate(completed, config)
@@ -28,6 +31,6 @@ def validate_repository(root: Path, all_projects: bool = False) -> list[str]:
     elif state.current_project_id:
         active = project_dir(root, state.current_project_id)
         if active.exists():
-            run_quality_gate(active, config)
+            run_quality_gate(active, config, require_tests=False)
             messages.append(f"validated {active.relative_to(root).as_posix()}")
     return messages
