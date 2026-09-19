@@ -100,6 +100,8 @@ def run_quality_gate(
     project_dir: Path,
     config: ForgeConfig,
     autoformat_paths: list[Path] | tuple[Path, ...] | None = None,
+    *,
+    require_tests: bool = True,
 ) -> QualityReport:
     # Formatting is the only quality operation allowed to mutate the real worktree. All generated
     # code execution happens in an isolated disposable copy with a scrubbed environment.
@@ -141,12 +143,14 @@ def run_quality_gate(
 
         python_sources = list(src_dir.rglob("*.py")) if src_dir.exists() else []
         tests = list(tests_dir.rglob("test_*.py")) if tests_dir.exists() else []
-        if python_sources and not tests:
+        if python_sources and not tests and require_tests:
             raise QualityError("Executable source exists but the project has no tests")
 
         if tests:
             args = [sys.executable, "-m", "pytest", "-q", "--disable-socket"]
-            if python_sources:
+            # During partial active-project work, run all existing tests to catch regressions but do
+            # not enforce the final coverage floor until the worker claims the task is complete.
+            if python_sources and require_tests:
                 args.extend(
                     [
                         "--cov=src",
@@ -181,7 +185,7 @@ def _count_test_functions(tests_dir: Path) -> int:
 def run_completion_gate(
     project_dir: Path, config: ForgeConfig, validated_report: QualityReport | None = None
 ) -> QualityReport:
-    report = validated_report or run_quality_gate(project_dir, config)
+    report = validated_report or run_quality_gate(project_dir, config, require_tests=True)
     readme = project_dir / "README.md"
     if not readme.exists():
         raise QualityError("Final project README is missing")
@@ -193,9 +197,7 @@ def run_completion_gate(
     lower_readme = readme_text.lower()
     missing_sections = [name for name in _REQUIRED_README_SECTIONS if name not in lower_readme]
     if missing_sections:
-        raise QualityError(
-            "Final README must document: " + ", ".join(missing_sections)
-        )
+        raise QualityError("Final README must document: " + ", ".join(missing_sections))
     if "synthetic" not in lower_readme and "simulation" not in lower_readme:
         raise QualityError("Final README must explicitly document synthetic/simulation scope")
 
