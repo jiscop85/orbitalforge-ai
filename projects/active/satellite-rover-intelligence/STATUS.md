@@ -13,27 +13,4 @@
 - [ ] **T09 — Integrated mission simulator**
 - [ ] **T10 — Experiment harness and documentation**
 
-## Current automated review guidance
-
-Previous attempt was rolled back by automated validation: /opt/hostedtoolcache/Python/3.12.14/x64/bin/python -m ruff check /tmp/orbitalforge-zy49a4gn/project/src failed (1):
-I001 [*] Import block is un-sorted or un-formatted
- --> src/terrain.py:1:1
-  |
-1 | / import numpy as np
-2 | | from dataclasses import dataclass
-  | |_________________________________^
-help: Organize imports
-  |
-  - import numpy as np
-1 | from dataclasses import dataclass
-2 |
-3 + import numpy as np
-4 +
-5 |
-  |
-
-Found 1 error.
-[*] 1 fixable with the `--fix` option.
-
-
 > Progress advances only after security, quality, test, and review gates.
