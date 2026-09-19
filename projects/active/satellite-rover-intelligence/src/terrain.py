@@ -17,3 +17,31 @@ class TerrainCube:
             raise ValueError("bands must be 3D")
         if self.bands.shape[:2] != self.elevation.shape:
             raise ValueError("band spatial dims mismatch")
+        if self.mask.shape != self.elevation.shape:
+            raise ValueError("mask shape mismatch")
+        if self.traversable.shape != self.elevation.shape:
+            raise ValueError("traversable shape mismatch")
+        if not np.all((self.mask >= 0) & (self.mask <= 1)):
+            raise ValueError("mask out of range")
+        if not np.all((self.traversable >= 0) & (self.traversable <= 1)):
+            raise ValueError("traversable out of range")
+        if not np.all((self.bands >= 0) & (self.bands <= 1)):
+            raise ValueError("bands out of range")
+
+
+def simulate_terrain(seed: int, size: int = 32, n_bands: int = 4) -> TerrainCube:
+    if size <= 0:
+        raise ValueError("size must be positive")
+    if n_bands <= 0:
+        raise ValueError("n_bands must be positive")
+    rng = np.random.default_rng(seed)
+    elev = rng.uniform(0.0, 100.0, (size, size))
+    bands = rng.uniform(0.0, 1.0, (size, size, n_bands))
+    mask = np.ones((size, size), dtype=float)
+    traversable = np.ones((size, size), dtype=float)
+    n_obs = max(1, size // 8)
+    for _ in range(n_obs):
+        r, c = rng.integers(0, size, 2)
+        mask[r, c] = 0.0
+        traversable[r, c] = 0.0
+    return TerrainCube(elevation=elev, bands=bands, mask=mask, traversable=traversable)
