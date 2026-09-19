@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import ast
@@ -39,20 +40,25 @@ _SENSITIVE_ENV_MARKERS = (
 _UNFINISHED_MARKERS = re.compile(
     r"(?im)(?:^|\s)(?:TODO|FIXME|TBD)(?:\s|:|$)|notimplementederror|placeholder implementation"
 )
+
 _REQUIRED_README_SECTIONS = ("usage", "reproducibility", "limitations")
 
 
 def _sanitized_test_env(src_dir: Path, project_dir: Path) -> dict[str, str]:
     env: dict[str, str] = {}
+
     for key, value in os.environ.items():
         upper = key.upper()
         if any(marker in upper for marker in _SENSITIVE_ENV_MARKERS):
             continue
         env[key] = value
+
     private_home = project_dir / ".sandbox-home"
     private_tmp = project_dir / ".sandbox-tmp"
+
     private_home.mkdir(exist_ok=True)
     private_tmp.mkdir(exist_ok=True)
+
     env.update(
         {
             "PYTHONHASHSEED": "0",
@@ -64,12 +70,19 @@ def _sanitized_test_env(src_dir: Path, project_dir: Path) -> dict[str, str]:
             "MPLCONFIGDIR": str(private_home / ".matplotlib"),
         }
     )
+
     pythonpath = str(src_dir) if src_dir.exists() else str(project_dir)
     env["PYTHONPATH"] = pythonpath
+
     return env
 
 
-def _run(args: list[str], cwd: Path, timeout: int, env: dict[str, str] | None = None) -> str:
+def _run(
+    args: list[str],
+    cwd: Path,
+    timeout: int,
+    env: dict[str, str] | None = None,
+) -> str:
     try:
         result = subprocess.run(
             args,
@@ -82,17 +95,29 @@ def _run(args: list[str], cwd: Path, timeout: int, env: dict[str, str] | None = 
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise QualityError(f"{' '.join(args)} timed out after {timeout}s") from exc
+        raise QualityError(
+            f"{' '.join(args)} timed out after {timeout}s"
+        ) from exc
+
     if result.returncode != 0:
         tail = result.stdout[-8000:]
-        raise QualityError(f"{' '.join(args)} failed ({result.returncode}):\n{tail}")
+        raise QualityError(
+            f"{' '.join(args)} failed ({result.returncode}):\n{tail}"
+        )
+
     return result.stdout[-5000:]
 
 
-def _sandbox_copy(project_dir: Path) -> tuple[tempfile.TemporaryDirectory[str], Path]:
-    holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(prefix="orbitalforge-")
+def _sandbox_copy(
+    project_dir: Path,
+) -> tuple[tempfile.TemporaryDirectory[str], Path]:
+    holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
+        prefix="orbitalforge-"
+    )
+
     sandbox = Path(holder.name) / "project"
     shutil.copytree(project_dir, sandbox)
+
     return holder, sandbox
 
 
@@ -103,53 +128,167 @@ def run_quality_gate(
     *,
     require_tests: bool = True,
 ) -> QualityReport:
-    # Formatting is the only quality operation allowed to mutate the real worktree. All generated
-    # code execution happens in an isolated disposable copy with a scrubbed environment.
+
+    # Auto-fix is restricted to Python files written by the current worker tick.
+    # All quality tests execute in an isolated disposable copy, not in the repository.
+
+    project_root = project_dir.resolve()
+
     format_targets = [
         str(path)
         for path in (autoformat_paths or [])
-        if path.exists() and path.suffix.lower() == ".py" and project_dir in path.parents
+        if (
+            path.is_file()
+            and path.suffix.lower() == ".py"
+            and project_root in path.resolve().parents
+        )
     ]
+
     commands: list[str] = []
     summaries: list[str] = []
+
     if format_targets:
-        args = [sys.executable, "-m", "ruff", "format", *format_targets]
-        summaries.append(_run(args, project_dir, config.quality_timeout_seconds))
-        commands.append(" ".join(args))
+
+        # Ruff format alone does not fix I001 (import order).
+        # Apply the narrowly scoped I-rule fix first,
+        # then format the resulting imports.
+
+        for args in (
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "check",
+                "--select",
+                "I",
+                "--fix",
+                *format_targets,
+            ],
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "format",
+                *format_targets,
+            ],
+        ):
+            summaries.append(
+                _run(
+                    args,
+                    project_dir,
+                    config.quality_timeout_seconds,
+                )
+            )
+
+            commands.append(" ".join(args))
+
+    # Security checks apply to the final auto-corrected files
+    # before any test execution.
 
     scan_project_text(project_dir)
     scan_project_manifests(project_dir, config)
     scan_python_project(project_dir, config)
 
     holder, sandbox = _sandbox_copy(project_dir)
+
     try:
         src_dir = sandbox / "src"
         tests_dir = sandbox / "tests"
+
         env = _sanitized_test_env(src_dir, sandbox)
 
         if src_dir.exists() and any(src_dir.rglob("*.py")):
-            args = [sys.executable, "-m", "compileall", "-q", str(src_dir)]
-            summaries.append(_run(args, sandbox, config.quality_timeout_seconds, env))
+            args = [
+                sys.executable,
+                "-m",
+                "compileall",
+                "-q",
+                str(src_dir),
+            ]
+
+            summaries.append(
+                _run(
+                    args,
+                    sandbox,
+                    config.quality_timeout_seconds,
+                    env,
+                )
+            )
+
             commands.append(" ".join(args))
 
-        lint_targets = [str(path) for path in (src_dir, tests_dir) if path.exists()]
+        lint_targets = [
+            str(path)
+            for path in (src_dir, tests_dir)
+            if path.exists()
+        ]
+
         if lint_targets:
-            args = [sys.executable, "-m", "ruff", "check", *lint_targets]
-            summaries.append(_run(args, sandbox, config.quality_timeout_seconds, env))
-            commands.append(" ".join(args))
-            args = [sys.executable, "-m", "ruff", "format", "--check", *lint_targets]
-            summaries.append(_run(args, sandbox, config.quality_timeout_seconds, env))
+            args = [
+                sys.executable,
+                "-m",
+                "ruff",
+                "check",
+                *lint_targets,
+            ]
+
+            summaries.append(
+                _run(
+                    args,
+                    sandbox,
+                    config.quality_timeout_seconds,
+                    env,
+                )
+            )
+
             commands.append(" ".join(args))
 
-        python_sources = list(src_dir.rglob("*.py")) if src_dir.exists() else []
-        tests = list(tests_dir.rglob("test_*.py")) if tests_dir.exists() else []
+            args = [
+                sys.executable,
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                *lint_targets,
+            ]
+
+            summaries.append(
+                _run(
+                    args,
+                    sandbox,
+                    config.quality_timeout_seconds,
+                    env,
+                )
+            )
+
+            commands.append(" ".join(args))
+
+        python_sources = (
+            list(src_dir.rglob("*.py"))
+            if src_dir.exists()
+            else []
+        )
+
+        tests = (
+            list(tests_dir.rglob("test_*.py"))
+            if tests_dir.exists()
+            else []
+        )
+
         if python_sources and not tests and require_tests:
-            raise QualityError("Executable source exists but the project has no tests")
+            raise QualityError(
+                "Executable source exists but the project has no tests"
+            )
 
         if tests:
-            args = [sys.executable, "-m", "pytest", "-q", "--disable-socket"]
-            # During partial active-project work, run all existing tests to catch regressions but do
-            # not enforce the final coverage floor until the worker claims the task is complete.
+            args = [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "--disable-socket",
+            ]
+
             if python_sources and require_tests:
                 args.extend(
                     [
@@ -158,66 +297,126 @@ def run_quality_gate(
                         f"--cov-fail-under={config.coverage_min_percent}",
                     ]
                 )
+
             args.append(str(tests_dir))
-            summaries.append(_run(args, sandbox, config.quality_timeout_seconds, env))
+
+            summaries.append(
+                _run(
+                    args,
+                    sandbox,
+                    config.quality_timeout_seconds,
+                    env,
+                )
+            )
+
             commands.append(" ".join(args))
+
     finally:
         holder.cleanup()
 
-    return QualityReport(commands=tuple(commands), summary="\n".join(filter(None, summaries))[-8000:])
+    return QualityReport(
+        commands=tuple(commands),
+        summary="\n".join(filter(None, summaries))[-8000:],
+    )
 
 
 def _count_test_functions(tests_dir: Path) -> int:
     count = 0
+
     for path in tests_dir.rglob("test_*.py"):
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            tree = ast.parse(
+                path.read_text(encoding="utf-8"),
+                filename=str(path),
+            )
         except SyntaxError:
             continue
+
         count += sum(
             1
             for node in ast.walk(tree)
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name.startswith("test_")
         )
+
     return count
 
 
 def run_completion_gate(
-    project_dir: Path, config: ForgeConfig, validated_report: QualityReport | None = None
+    project_dir: Path,
+    config: ForgeConfig,
+    validated_report: QualityReport | None = None,
 ) -> QualityReport:
-    report = validated_report or run_quality_gate(project_dir, config, require_tests=True)
+
+    report = validated_report or run_quality_gate(
+        project_dir,
+        config,
+        require_tests=True,
+    )
+
     readme = project_dir / "README.md"
+
     if not readme.exists():
         raise QualityError("Final project README is missing")
-    readme_text = readme.read_text(encoding="utf-8", errors="replace")
+
+    readme_text = readme.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
     if len(readme_text) < config.min_final_readme_chars:
         raise QualityError(
-            f"Final project README is too small ({len(readme_text)} < {config.min_final_readme_chars})"
+            f"Final project README is too small "
+            f"({len(readme_text)} < {config.min_final_readme_chars})"
         )
+
     lower_readme = readme_text.lower()
-    missing_sections = [name for name in _REQUIRED_README_SECTIONS if name not in lower_readme]
+
+    missing_sections = [
+        name
+        for name in _REQUIRED_README_SECTIONS
+        if name not in lower_readme
+    ]
+
     if missing_sections:
-        raise QualityError("Final README must document: " + ", ".join(missing_sections))
+        raise QualityError(
+            "Final README must document: " + ", ".join(missing_sections)
+        )
+
     if "synthetic" not in lower_readme and "simulation" not in lower_readme:
-        raise QualityError("Final README must explicitly document synthetic/simulation scope")
+        raise QualityError(
+            "Final README must explicitly document synthetic/simulation scope"
+        )
 
     src_dir = project_dir / "src"
     tests_dir = project_dir / "tests"
+
     if not src_dir.exists() or not any(src_dir.rglob("*.py")):
         raise QualityError("Final project has no executable Python source")
+
     if not tests_dir.exists() or not any(tests_dir.rglob("test_*.py")):
         raise QualityError("Final project has no test suite")
+
     test_count = _count_test_functions(tests_dir)
+
     if test_count < config.min_final_tests:
         raise QualityError(
-            f"Final project needs at least {config.min_final_tests} explicit tests; found {test_count}"
+            f"Final project needs at least {config.min_final_tests} "
+            f"explicit tests; found {test_count}"
         )
 
     for base in (src_dir, tests_dir):
         for path in base.rglob("*.py"):
-            text = path.read_text(encoding="utf-8", errors="replace")
+            text = path.read_text(
+                encoding="utf-8",
+                errors="replace",
+            )
+
             if _UNFINISHED_MARKERS.search(text):
                 rel = path.relative_to(project_dir).as_posix()
-                raise QualityError(f"Unfinished implementation marker remains in {rel}")
+
+                raise QualityError(
+                    f"Unfinished implementation marker remains in {rel}"
+                )
 
     return report
