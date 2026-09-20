@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **2**
-Rejected/rolled-back candidates: **16**
-Model usage recorded: **31,544 input / 8,813 output tokens**
+Rejected/rolled-back candidates: **17**
+Model usage recorded: **33,548 input / 9,029 output tokens**
 
 ## Active
 
@@ -14,6 +14,10 @@ Model usage recorded: **31,544 input / 8,813 output tokens**
 
 ## Latest autonomous event
 
-- `satellite-rover-intelligence/T01` — Created the deterministic terrain simulator (simulate_terrain) and expanded TerrainCube.validate to enforce explicit invariants for mask, traversability, and band ranges. This fulfills the source-code portion of T01; tests will be added next.
+- `satellite-rover-intelligence/T01` — candidate work rejected and rolled back
 
-Last updated: 2026-09-19T23:05:24.257668+00:00
+## Latest gate/audit note
+
+> Unapproved third-party import 'src' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/tests/test_terrain.py
+
+Last updated: 2026-09-20T01:08:43.888185+00:00
