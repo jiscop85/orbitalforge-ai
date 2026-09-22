@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
-Validated work units: **7**
+Validated work units: **8**
 Rejected/rolled-back candidates: **23**
-Model usage recorded: **55,825 input / 12,977 output tokens**
+Model usage recorded: **57,826 input / 13,501 output tokens**
 
 ## Active
 
@@ -14,6 +14,6 @@ Model usage recorded: **55,825 input / 12,977 output tokens**
 
 ## Latest autonomous event
 
-- `satellite-rover-intelligence/T01` — Created deterministic terrain simulator with typed data model, validation invariants, and obstacle generation.
+- `satellite-rover-intelligence/T01` — Created deterministic terrain simulator with typed data model and validation invariants.
 
-Last updated: 2026-09-22T00:08:05.202041+00:00
+Last updated: 2026-09-22T04:56:40.340600+00:00
