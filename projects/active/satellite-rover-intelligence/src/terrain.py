@@ -27,11 +27,11 @@ class TerrainCube:
             raise ValueError("traversable out of range")
 
 
-def simulate_terrain(size: int, seed: int = 42) -> TerrainCube:
-    if size <= 0:
-        raise ValueError("size must be positive")
+def simulate_terrain(size: int, seed: int) -> TerrainCube:
+    if size < 2:
+        raise ValueError("size must be >= 2")
     rng = np.random.default_rng(seed)
-    elev = rng.random((size, size)) * 100.0
+    elev = rng.random((size, size)) * 10.0
     bands = rng.random((size, size, 4))
     mask = np.ones((size, size), dtype=float)
     traversable = np.ones((size, size), dtype=float)
@@ -40,4 +40,6 @@ def simulate_terrain(size: int, seed: int = 42) -> TerrainCube:
         r, c = rng.integers(0, size, 2)
         mask[r, c] = 0.0
         traversable[r, c] = 0.0
-    return TerrainCube(elevation=elev, bands=bands, mask=mask, traversable=traversable)
+    cube = TerrainCube(elevation=elev, bands=bands, mask=mask, traversable=traversable)
+    cube.validate()
+    return cube
