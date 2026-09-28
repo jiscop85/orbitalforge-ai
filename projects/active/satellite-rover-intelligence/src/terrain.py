@@ -28,11 +28,13 @@ class TerrainCube:
 
 
 def simulate_terrain(size: int, seed: int, n_bands: int = 4) -> TerrainCube:
-    if size <= 0 or n_bands <= 0:
-        raise ValueError("size and n_bands must be positive")
+    if size <= 0:
+        raise ValueError("size must be positive")
+    if n_bands <= 0:
+        raise ValueError("n_bands must be positive")
     rng = np.random.default_rng(seed)
-    elev = rng.uniform(0.0, 100.0, (size, size))
-    bands = rng.uniform(0.0, 1.0, (size, size, n_bands))
+    elev = rng.uniform(0, 100, (size, size))
+    bands = rng.uniform(0, 1, (size, size, n_bands))
     mask = np.ones((size, size))
     traversable = np.ones((size, size))
     n_obs = max(1, size // 8)
