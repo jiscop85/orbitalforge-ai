@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
-Validated work units: **27**
+Validated work units: **28**
 Rejected/rolled-back candidates: **38**
-Model usage recorded: **126,553 input / 27,019 output tokens**
+Model usage recorded: **128,559 input / 27,579 output tokens**
 
 ## Active
 
@@ -14,6 +14,6 @@ Model usage recorded: **126,553 input / 27,019 output tokens**
 
 ## Latest autonomous event
 
-- `satellite-rover-intelligence/T01` — Created the deterministic terrain simulator and data model in src/terrain.py. This establishes the foundation for T01 by providing a validated TerrainCube structure and a seeded simulation function that generates elevation, multispectral bands, masks, and traversability maps.
+- `satellite-rover-intelligence/T01` — Created deterministic terrain simulator with typed data model, validation invariants, and obstacle generation.
 
-Last updated: 2026-09-28T15:28:42.467132+00:00
+Last updated: 2026-09-28T22:02:00.664370+00:00
