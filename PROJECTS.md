@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **63**
-Rejected/rolled-back candidates: **70**
-Model usage recorded: **264,347 input / 53,253 output tokens**
+Rejected/rolled-back candidates: **71**
+Model usage recorded: **266,353 input / 53,478 output tokens**
 
 ## Active
 
@@ -14,6 +14,10 @@ Model usage recorded: **264,347 input / 53,253 output tokens**
 
 ## Latest autonomous event
 
-- `satellite-rover-intelligence/T01` — Created the core terrain data model and deterministic simulator. The TerrainCube dataclass enforces shape and range invariants. The simulate_terrain function generates reproducible elevation, multispectral bands, and ground-truth traversability based on a seed.
+- `satellite-rover-intelligence/T01` — candidate work rejected and rolled back
 
-Last updated: 2026-10-14T15:10:13.811925+00:00
+## Latest gate/audit note
+
+> Unapproved third-party import 'src' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/tests/test_terrain.py
+
+Last updated: 2026-10-14T19:23:16.097965+00:00
