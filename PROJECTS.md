@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **81**
-Rejected/rolled-back candidates: **74**
-Model usage recorded: **308,650 input / 63,839 output tokens**
+Rejected/rolled-back candidates: **75**
+Model usage recorded: **310,656 input / 64,061 output tokens**
 
 ## Active
 
@@ -14,6 +14,10 @@ Model usage recorded: **308,650 input / 63,839 output tokens**
 
 ## Latest autonomous event
 
-- `satellite-rover-intelligence/T01` — Created deterministic terrain simulator with typed data model, validation invariants, and reproducibility guarantees.
+- `satellite-rover-intelligence/T01` — candidate work rejected and rolled back
 
-Last updated: 2026-10-18T09:38:52.499490+00:00
+## Latest gate/audit note
+
+> Unapproved third-party import 'src' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/tests/test_terrain.py
+
+Last updated: 2026-10-18T14:01:49.666037+00:00
