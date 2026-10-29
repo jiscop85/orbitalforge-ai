@@ -28,8 +28,10 @@ class TerrainCube:
 
 
 def simulate_terrain(size: int, seed: int, n_bands: int = 4) -> TerrainCube:
-    if size <= 0 or n_bands <= 0:
-        raise ValueError("size and n_bands must be positive")
+    if size <= 0:
+        raise ValueError("size must be positive")
+    if n_bands <= 0:
+        raise ValueError("n_bands must be positive")
     rng = np.random.default_rng(seed)
     elev = rng.random((size, size))
     bands = rng.random((size, size, n_bands))
