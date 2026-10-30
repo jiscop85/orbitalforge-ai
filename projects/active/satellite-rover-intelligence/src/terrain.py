@@ -25,11 +25,13 @@ class TerrainCube:
             raise ValueError("mask out of range")
         if not np.all((self.traversable >= 0) & (self.traversable <= 1)):
             raise ValueError("traversable out of range")
+        if not np.all(np.isfinite(self.elevation)):
+            raise ValueError("elevation contains non-finite values")
 
 
 def simulate_terrain(size: int, seed: int) -> TerrainCube:
-    if size <= 0:
-        raise ValueError("size must be positive")
+    if size < 2:
+        raise ValueError("size must be >= 2")
     rng = np.random.default_rng(seed)
     elev = rng.uniform(0.0, 100.0, (size, size))
     bands = rng.uniform(0.0, 1.0, (size, size, 4))
