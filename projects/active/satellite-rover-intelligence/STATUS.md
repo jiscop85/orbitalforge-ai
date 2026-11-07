@@ -13,4 +13,8 @@
 - [ ] **T09 — Integrated mission simulator**
 - [ ] **T10 — Experiment harness and documentation**
 
+## Current automated review guidance
+
+Previous attempt was rolled back by automated validation: Unapproved third-party import 'src' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/tests/test_terrain.py
+
 > Progress advances only after security, quality, test, and review gates.
