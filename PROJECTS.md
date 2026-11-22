@@ -1,8 +1,8 @@
 # OrbitalForge research program
 
 Validated work units: **191**
-Rejected/rolled-back candidates: **109**
-Model usage recorded: **600,944 input / 131,178 output tokens**
+Rejected/rolled-back candidates: **110**
+Model usage recorded: **602,984 input / 131,410 output tokens**
 
 ## Active
 
@@ -20,4 +20,4 @@ Model usage recorded: **600,944 input / 131,178 output tokens**
 
 > Unapproved third-party import 'src' in /home/runner/work/orbitalforge-ai/orbitalforge-ai/projects/active/satellite-rover-intelligence/tests/test_terrain.py
 
-Last updated: 2026-11-22T11:23:31.585301+00:00
+Last updated: 2026-11-22T19:38:29.532746+00:00
