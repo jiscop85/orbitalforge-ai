@@ -27,7 +27,7 @@ class TerrainCube:
             raise ValueError("traversable out of range")
 
 
-def simulate_terrain(size: int, seed: int = 42) -> TerrainCube:
+def simulate_terrain(size: int, seed: int) -> TerrainCube:
     if size <= 0:
         raise ValueError("size must be positive")
     rng = np.random.default_rng(seed)
